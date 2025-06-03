@@ -123,7 +123,9 @@ urlpatterns = (
 
 My_Urls = (
 	[	#这里的crud_demo是指django创建的应用名称crud_demo
-        path('',include('crud_demo.urls')),]
+        path('',include('crud_demo.urls')),
+        path('',include('prediction_system.urls'))
+    ]
 )
 
 # 这里把自己的路径单独出来，后面再追加在一起
