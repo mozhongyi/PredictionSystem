@@ -64,6 +64,7 @@ INSTALLED_APPS = [
 
 My_Apps = [
 	'crud_demo',
+    'prediction_system',
 ]
 
 INSTALLED_APPS += My_Apps
