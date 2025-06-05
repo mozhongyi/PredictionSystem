@@ -22,3 +22,18 @@ class CrudDemoModelCreateUpdateSerializer(CustomModelSerializer):
     class Meta:
         model = CrudDemoModel
         fields = '__all__'
+
+class CrudDemoModelImportSerializer(CustomModelSerializer):
+    """
+    DemoModel导入时的列化器
+    """
+
+    class Meta:
+        model = CrudDemoModel
+        fields = '__all__'
+
+class ExportCrudDemoSerializer(CustomModelSerializer):
+
+    class Meta:
+        model = CrudDemoModel
+        fields = "__all__"
