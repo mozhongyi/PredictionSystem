@@ -49,3 +49,11 @@ export function exportData(params:any){
         method: 'get'                           // GET 请求
     })
 }
+
+// 一键删除的请求函数，用于调用后端一键删除接口
+export function deleteAllWaterInfo() {
+    return request({
+        url: apiPrefix + 'delete-all/',
+        method: 'delete',
+    });
+}

@@ -49,6 +49,16 @@ export default function ({ crudExpose}: { crudExpose: CrudExpose}): CreateCrudOp
                     add: {
                         show: auth('WaterInfoModelViewSet:Create'),
                     },
+                    deleteAll: {
+                        show: auth('WaterInfoModelViewSet:DeleteAll'), // 假设这里有对应的权限检查
+                        text: "一键删除",
+                        title: "删除所有涌水量信息数据",
+                        click() {
+                            return api.deleteAllWaterInfo().then(() => {
+                                crudExpose.doRefresh(); // 删除成功后刷新列表
+                            });
+                        }
+                    },
                 }
             },
             rowHandle: {
