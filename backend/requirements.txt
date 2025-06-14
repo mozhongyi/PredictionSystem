@@ -30,3 +30,9 @@ gevent==24.2.1
 Pillow==10.4.0
 pyinstaller==6.9.0
 dvadmin3-celery==3.1.6
+pandas
+torch
+seaborn
+scikit-learn
+plotly
+chardet
