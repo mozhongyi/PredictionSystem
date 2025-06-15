@@ -346,4 +346,6 @@ def LstmModelTrainAll(Data, lookback = 30, input_dim = 2,hidden_dim = 60,num_lay
             logger.log(f'./images/{name}真实值vs预测值.png保存成功')
             fig.show()
         except Exception as e:
-            logger.log(f"训练过程中发生错误: {str(e)}")
+            logger.log(f"{name}训练过程中发生错误: {str(e)}")
+            return f'{name}训练失败:{str(e)}'
+    return 'success'

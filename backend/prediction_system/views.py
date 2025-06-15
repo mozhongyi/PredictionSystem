@@ -1,14 +1,18 @@
 from prediction_system.models import WaterInfoModel
 from prediction_system.serializers import WaterInfoModelSerializer, WaterInfoModelCreateUpdateSerializer, WaterInfoModelImportSerializer, ExportWaterInfoModelSerializer
 from dvadmin.utils.viewset import CustomModelViewSet
+from model.LstmModel import LstmModelTrainAll
 
 from django.db import transaction
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework import status
 
+import pandas as pd
+import logging
 
 
+# 涌水量信息视图类，用于管理WaterInfo表的所有信息
 class WaterInfoModelViewSet(CustomModelViewSet):
     """
     list:查询
@@ -75,3 +79,53 @@ class WaterInfoModelViewSet(CustomModelViewSet):
             return Response({'message': f'成功删除 {deleted_count} 条数据'}, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({'detail': f'删除失败: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+# Lstm模型视图类，包含训练以及可视化，日志展示等功能
+class LtsmModelViewSet(CustomModelViewSet):
+    # 获取water_info中的所有数据
+    queryset = WaterInfoModel.objects.all()
+    serializer_class = WaterInfoModelSerializer
+
+    # Lstm模型训练函数
+    @action(detail=False, methods=['post'], url_path='lstm-trainall')
+    def Lstm_Train_All(self, request):
+        try:
+            # 获取查询集
+            queryset = self.get_queryset()
+            # 检查是否有数据
+            if not queryset.exists():
+                return Response({'detail': '数据不存在，请先导入数据'}, status=status.HTTP_400_BAD_REQUEST)
+
+            # 将数据转化为pandas
+            data = list(queryset.values())
+            df = pd.DataFrame(data)
+
+            # 调用模型进行训练
+            # result为'success'表示所有模型训练成功,否则表示失败
+            result = LstmModelTrainAll(df)
+
+            # 根据返回结果判断训练是否成功
+            if result == 'success':
+                return Response({
+                    'message': '模型训练成功',
+                    'data_count': len(df),
+                }, status=status.HTTP_200_OK)
+            else:
+                # 记录详细的错误日志
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error(f"模型训练失败: {result}")
+
+                return Response({
+                    'detail': '模型训练失败',
+                    'error': result
+                }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        except Exception as e:
+            logger = logging.getLogger(__name__)
+            logger.error(f"模型训练失败: {str(e)}", exc_info=True)
+
+            return Response({
+                'detail': '模型训练失败',
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
