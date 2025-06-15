@@ -192,5 +192,158 @@ def LstmModelTrainAll(Data, lookback = 30, input_dim = 2,hidden_dim = 60,num_lay
             # print("Training time: {}".format(training_time))
             logger.log("Training time: {}".format(training_time))
             logger.log(f"{name} 训练完成\n")
+
+            # 模型结果可视化
+            predict = pd.DataFrame(scaler.inverse_transform(y_train_pred.detach().numpy()))
+            original = pd.DataFrame(scaler.inverse_transform(y_train_lstm.detach().numpy()))
+            sns.set_style("darkgrid")
+            fig = plt.figure()
+            fig.subplots_adjust(hspace=0.2, wspace=0.2)
+            plt.subplot(1, 2, 1)
+            ax = sns.lineplot(x=original.index, y=original[0], label="origin", color='royalblue')
+            ax = sns.lineplot(x=predict.index, y=predict[0], label="predict", color='tomato')
+            ax.set_title(f'{name}训练集LSTM预测结果对比', size=14, fontweight='bold', fontfamily=["SimHei"])
+            ax.set_xlabel("Time", size=14)
+            ax.set_ylabel("Data", size=14)
+            ax.set_xticklabels('', size=10)
+
+            plt.subplot(1, 2, 2)
+            ax = sns.lineplot(data=hist, color='royalblue')
+            ax.set_xlabel("Epoch", size=14)
+            ax.set_ylabel("Loss", size=14)
+            ax.set_title(f'{name} Trainset Loss', size=14, fontweight='bold')
+            fig.set_figheight(6)
+            fig.set_figwidth(16)
+            # 保存训练集可视化结果到指定目录
+            image_path = f'./images/{name}LSTM训练集可视化结果.png'
+            plt.savefig(image_path, dpi=300, bbox_inches="tight")
+            logger.log(f'./images/{name}LSTM训练集可视化结果.png保存成功')
+            plt.show()
+
+            # 加载最优模型参数
+            model.load_state_dict(torch.load(best_model_path, weights_only=True))
+            model.eval()  # 将模型设置为评估模式
+
+            # 加载归一化格式
+            scaler = joblib.load(best_scaler_path)
+
+            # 在测试集上验证
+            with torch.no_grad():  # 禁用梯度计算
+                y_test_pred = model(x_test)
+                y_train_pred = model(x_train)
+                y_val_pred = model(x_val)
+
+            # 归一化数据回到原来状态
+            y_train_pred = scaler.inverse_transform(y_train_pred.detach().numpy())
+            y_train = scaler.inverse_transform(y_train_lstm.detach().numpy())
+            y_val_pred = scaler.inverse_transform(y_val_pred.detach().numpy())
+            y_val = scaler.inverse_transform(y_val_lstm.detach().numpy())
+            y_test_pred = scaler.inverse_transform(y_test_pred.detach().numpy())
+            y_test = scaler.inverse_transform(y_test_lstm.detach().numpy())
+
+            # 计算训练集、验证集和测试集的均方误差
+            trainScore = math.sqrt(mean_squared_error(y_train[:, 0], y_train_pred[:, 0]))
+            logger.log('Train Score: %.2f RMSE' % (trainScore))
+            valScore = math.sqrt(mean_squared_error(y_val[:, 0], y_val_pred[:, 0]))
+            logger.log('Train Score: %.2f RMSE' % (valScore))
+            testScore = math.sqrt(mean_squared_error(y_test[:, 0], y_test_pred[:, 0]))
+            logger.log('Test Score: %.2f RMSE' % (testScore))
+
+            # 制作可视化数据集
+            new_target = target[['涌水量']]
+
+            # 转换数据
+            trainPredictPlot = np.empty_like(new_target)
+            trainPredictPlot[:, 0] = np.nan
+            trainPredictPlot[lookback - 1:len(y_train_pred) + lookback - 1, :] = y_train_pred
+
+            valPredictPlot = np.empty_like(new_target)
+            valPredictPlot[:, 0] = np.nan
+            valPredictPlot[len(y_train_pred) + lookback - 1:len(y_train_pred) + lookback - 1 + len(y_val_pred),
+            :] = y_val_pred
+
+            testPredictPlot = np.empty_like(new_target)
+            testPredictPlot[:, :] = np.nan
+            testPredictPlot[len(y_train_pred) + lookback - 1 + len(y_val_pred):, :] = y_test_pred
+
+            original = scaler.inverse_transform(target['涌水量'].values.reshape(-1, 1))
+
+            predictions = np.append(trainPredictPlot, valPredictPlot, axis=1)
+            predictions = np.append(predictions, testPredictPlot, axis=1)
+            predictions = np.append(predictions, original, axis=1)
+            result = pd.DataFrame(predictions)
+
+            # 将集合好的result画图可视化
+            fig = go.Figure()
+            fig.add_trace(go.Scatter(go.Scatter(x=result.index, y=result[0],
+                                                mode='lines',
+                                                name='Train prediction')))
+            fig.add_trace(go.Scatter(x=result.index, y=result[1],
+                                     mode='lines',
+                                     name='Val prediction'))
+            fig.add_trace(go.Scatter(go.Scatter(x=result.index, y=result[2],
+                                                mode='lines',
+                                                name='Test prediction')))
+            fig.add_trace(go.Scatter(go.Scatter(x=result.index, y=result[3],
+                                                mode='lines',
+                                                name='Actual Value')))
+            fig.update_layout(
+                title={
+                    'text': f'{name}真实值vs预测值',  # 替换为您的标题文本
+                    'x': 0.5,  # 标题水平居中
+                    'xanchor': 'center',
+                    'y': 0.9,  # 标题在图表的顶部
+                    'yanchor': 'top',
+                    'font': {
+                        'family': "Rockwell",
+                        'size': 20,
+                        'color': 'white'
+                    }
+                },
+                xaxis=dict(
+                    showline=True,
+                    showgrid=True,
+                    showticklabels=False,
+                    linecolor='white',
+                    linewidth=2
+                ),
+                yaxis=dict(
+                    title_text="Value",
+                    titlefont=dict(
+                        family='Rockwell',
+                        size=12,
+                        color='white',
+                    ),
+                    showline=True,
+                    showgrid=True,
+                    showticklabels=True,
+                    linecolor='white',
+                    linewidth=2,
+                    ticks='outside',
+                    tickfont=dict(
+                        family='Rockwell',
+                        size=12,
+                        color='white',
+                    ),
+                ),
+                showlegend=True,
+                template='plotly_dark'
+
+            )
+
+            annotations = []
+            annotations.append(dict(xref='paper', yref='paper', x=0.0, y=1.05,
+                                    xanchor='left', yanchor='bottom',
+                                    text='Results (LSTM)',
+                                    font=dict(family='Rockwell',
+                                              size=26,
+                                              color='white'),
+                                    showarrow=False))
+            fig.update_layout(annotations=annotations)
+            # 保存可视化结果
+            image_path = f'./images/{name}真实值vs预测值.png'
+            fig.write_image(image_path, width=1200, height=600, scale=2)
+            logger.log(f'./images/{name}真实值vs预测值.png保存成功')
+            fig.show()
         except Exception as e:
             logger.log(f"训练过程中发生错误: {str(e)}")
