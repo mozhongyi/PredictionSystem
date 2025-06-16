@@ -1,4 +1,4 @@
-from prediction_system.models import WaterInfoModel
+from prediction_system.models import WaterInfoModel,LstmTrainStatusModel
 from prediction_system.serializers import WaterInfoModelSerializer, WaterInfoModelCreateUpdateSerializer, WaterInfoModelImportSerializer, ExportWaterInfoModelSerializer
 from dvadmin.utils.viewset import CustomModelViewSet
 from model.LstmModel import LstmModelTrainAll
@@ -35,9 +35,6 @@ class WaterInfoModelViewSet(CustomModelViewSet):
         "water_quantity": "涌水量"
     }
 
-    # 导入序列化器
-    import_serializer_class = WaterInfoModelImportSerializer
-
     export_field_label = {
         "date": {
             "title": '日期',
@@ -61,7 +58,7 @@ class WaterInfoModelViewSet(CustomModelViewSet):
     create_serializer_class = WaterInfoModelCreateUpdateSerializer
     update_serializer_class = WaterInfoModelCreateUpdateSerializer
 
-    # 一键删除的接口自定义
+    # 一键删除的接口自定义, 删除涌水量信息表同时删除训练状态信息表
     @action(detail=False, methods=['delete'], url_path='delete-all')
     def delete_all(self, request):
         """
@@ -75,15 +72,19 @@ class WaterInfoModelViewSet(CustomModelViewSet):
         try:
             # 使用事务确保操作的原子性
             with transaction.atomic():
-                deleted_count, _ = self.get_queryset().delete()
-            return Response({'message': f'成功删除 {deleted_count} 条数据'}, status=status.HTTP_200_OK)
+                # 删除涌水量信息表的所有数据
+                water_deleted_count, _ = self.get_queryset().delete()
+                # 附带删除训练状态中所有数据
+                status_deleted_count, _ = LstmTrainStatusModel.objects.all().delete()
+            return Response({'message': f'成功删除涌水量信息表 {water_deleted_count} 条数据, 训练状态信息表 {status_deleted_count} 条数据'}, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({'detail': f'删除失败: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 # Lstm模型视图类，包含训练以及可视化，日志展示等功能
 class LtsmModelViewSet(CustomModelViewSet):
     # 获取water_info中的所有数据
-    queryset = WaterInfoModel.objects.all()
+    waterData = WaterInfoModel.objects.all()
+    status_data = LstmTrainStatusModel.objects.all()
     serializer_class = WaterInfoModelSerializer
 
     # Lstm模型训练函数
