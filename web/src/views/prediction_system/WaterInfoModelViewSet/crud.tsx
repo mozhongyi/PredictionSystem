@@ -118,8 +118,8 @@ export default function ({ crudExpose}: { crudExpose: CrudExpose}): CreateCrudOp
                         rules: [{ required: true, message: '经度必填' }],
                         component: {
                             placeholder: '请输入经度',
-                            // 控制小数位数为6位
-                            step: 0.000001,
+                            // 控制小数位数为3位
+                            step: 0.001,
                         },
                     },
                 },
@@ -136,7 +136,7 @@ export default function ({ crudExpose}: { crudExpose: CrudExpose}): CreateCrudOp
                         rules: [{ required: true, message: '纬度必填' }],
                         component: {
                             placeholder: '请输入纬度',
-                            step: 0.000001,
+                            step: 0.001,
                         },
                     },
                 },
@@ -152,7 +152,7 @@ export default function ({ crudExpose}: { crudExpose: CrudExpose}): CreateCrudOp
                         rules: [{ required: true, message: '高程必填' }],
                         component: {
                             placeholder: '请输入高程',
-                            step: 0.000001,
+                            step: 0.001,
                         },
                     },
                 },
@@ -168,7 +168,7 @@ export default function ({ crudExpose}: { crudExpose: CrudExpose}): CreateCrudOp
                         rules: [{ required: true, message: '日降雨量必填' }],
                         component: {
                             placeholder: '请输入日降雨量',
-                            step: 0.000001,
+                            step: 0.001,
                         },
                     },
                 },
@@ -184,7 +184,7 @@ export default function ({ crudExpose}: { crudExpose: CrudExpose}): CreateCrudOp
                         rules: [{required: true, message: '涌水量必填'}],
                         component: {
                             placeholder: '请输入涌水量',
-                            step: 0.000001,
+                            step: 0.001,
                         },
                     },
                 },

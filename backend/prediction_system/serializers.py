@@ -1,6 +1,7 @@
 from prediction_system.models import WaterInfoModel,LstmTrainStatusModel
 from dvadmin.utils.serializers import CustomModelSerializer
 from rest_framework import serializers
+from django.db import transaction
 
 
 class WaterInfoModelSerializer(CustomModelSerializer):
@@ -23,23 +24,35 @@ class WaterInfoModelCreateUpdateSerializer(CustomModelSerializer):
         fields = '__all__'
 
     def create(self, validated_data):
-        # 创建 WaterInfoModel 实例
-        water_info_instance = WaterInfoModel.objects.create(**validated_data)
-
-        # 从 validated_data 中获取经度、纬度和高程
-        longitude = validated_data.get('longitude')
-        latitude = validated_data.get('latitude')
-        altitude = validated_data.get('altitude')
-
-        # 检查 LstmTrainStatusModel 中是否已经存在该经纬度和高程的记录
-        lstm_train_status, created = LstmTrainStatusModel.objects.get_or_create(
-            longitude=longitude,
-            latitude=latitude,
-            altitude=altitude,
-            defaults={'is_train': 0}
-        )
-
-        return water_info_instance
+        if isinstance(validated_data, list):  # 处理批量导入
+            with transaction.atomic():
+                instances = []
+                for data in validated_data:
+                    longitude = data.get('longitude')
+                    latitude = data.get('latitude')
+                    altitude = data.get('altitude')
+                    # 检查 LstmTrainStatusModel 中是否已经存在该经纬度和高程的记录
+                    lstm_train_status, created = LstmTrainStatusModel.objects.get_or_create(
+                        longitude=longitude,
+                        latitude=latitude,
+                        altitude=altitude,
+                        defaults={'is_train': 0}
+                    )
+                    instance = WaterInfoModel.objects.create(**data)
+                    instances.append(instance)
+                return instances
+        else:  # 处理单条导入
+            longitude = validated_data.get('longitude')
+            latitude = validated_data.get('latitude')
+            altitude = validated_data.get('altitude')
+            # 检查 LstmTrainStatusModel 中是否已经存在该经纬度和高程的记录
+            lstm_train_status, created = LstmTrainStatusModel.objects.get_or_create(
+                longitude=longitude,
+                latitude=latitude,
+                altitude=altitude,
+                defaults={'is_train': 0}
+            )
+            return WaterInfoModel.objects.create(**validated_data)
 
 #导入时用到的列化器
 class WaterInfoModelImportSerializer(CustomModelSerializer):
@@ -50,6 +63,37 @@ class WaterInfoModelImportSerializer(CustomModelSerializer):
     class Meta:
         model = WaterInfoModel
         fields = '__all__'
+
+    def create(self, validated_data):
+        if isinstance(validated_data, list):  # 处理批量导入
+            with transaction.atomic():
+                instances = []
+                for data in validated_data:
+                    longitude = data.get('longitude')
+                    latitude = data.get('latitude')
+                    altitude = data.get('altitude')
+                    # 检查 LstmTrainStatusModel 中是否已经存在该经纬度和高程的记录
+                    lstm_train_status, created = LstmTrainStatusModel.objects.get_or_create(
+                        longitude=longitude,
+                        latitude=latitude,
+                        altitude=altitude,
+                        defaults={'is_train': 0}
+                    )
+                    instance = WaterInfoModel.objects.create(**data)
+                    instances.append(instance)
+                return instances
+        else:  # 处理单条导入
+            longitude = validated_data.get('longitude')
+            latitude = validated_data.get('latitude')
+            altitude = validated_data.get('altitude')
+            # 检查 LstmTrainStatusModel 中是否已经存在该经纬度和高程的记录
+            lstm_train_status, created = LstmTrainStatusModel.objects.get_or_create(
+                longitude=longitude,
+                latitude=latitude,
+                altitude=altitude,
+                defaults={'is_train': 0}
+            )
+            return WaterInfoModel.objects.create(**validated_data)
 
 #导出时用到的列化器
 class ExportWaterInfoModelSerializer(CustomModelSerializer):
