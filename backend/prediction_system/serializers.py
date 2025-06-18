@@ -111,7 +111,7 @@ class LstmTrainStatusModelSerializer(CustomModelSerializer):
     """
 
     # get_<field>_display() 方法,自动将0/1转换为未训练/已训练
-    is_train_display = serializers.CharField(source='get_is_train_display', read_only=True)
+    trainStatus = serializers.CharField(source='get_is_train_display', read_only=True)
 
     class Meta:
         model = LstmTrainStatusModel

@@ -1,5 +1,5 @@
 from prediction_system.models import WaterInfoModel,LstmTrainStatusModel
-from prediction_system.serializers import WaterInfoModelSerializer, WaterInfoModelCreateUpdateSerializer, WaterInfoModelImportSerializer, ExportWaterInfoModelSerializer
+from prediction_system.serializers import WaterInfoModelSerializer, WaterInfoModelCreateUpdateSerializer, WaterInfoModelImportSerializer, ExportWaterInfoModelSerializer,LstmTrainStatusModelSerializer
 from dvadmin.utils.viewset import CustomModelViewSet
 from model.LstmModel import LstmModelTrainAll
 
@@ -84,15 +84,15 @@ class WaterInfoModelViewSet(CustomModelViewSet):
 class LtsmModelViewSet(CustomModelViewSet):
     # 获取water_info中的所有数据
     waterData = WaterInfoModel.objects.all()
-    status_data = LstmTrainStatusModel.objects.all()
-    serializer_class = WaterInfoModelSerializer
+    serializer_class = LstmTrainStatusModelSerializer
+    queryset = LstmTrainStatusModel.objects.all()
 
     # Lstm模型训练函数
     @action(detail=False, methods=['post'], url_path='lstm-trainall')
     def Lstm_Train_All(self, request):
         try:
             # 获取查询集
-            queryset = self.get_queryset()
+            queryset = self.waterData
             # 检查是否有数据
             if not queryset.exists():
                 return Response({'detail': '数据不存在，请先导入数据'}, status=status.HTTP_400_BAD_REQUEST)
