@@ -4,6 +4,9 @@ import * as api from './api';
 import { request } from '/@/utils/service';
 import {auth} from "/@/utils/authFunction";
 
+// 导入训练单个点的接口
+import { trainSinglePoint } from './api';
+
 //此处为crudOptions配置
 export default function ({ crudExpose}: { crudExpose: CrudExpose}): CreateCrudOptionsRet {
     const pageRequest = async (query: any) => {
@@ -75,6 +78,36 @@ export default function ({ crudExpose}: { crudExpose: CrudExpose}): CreateCrudOp
                         type: 'text',
                         order: 4,
                         show: auth('LtsmModelViewSet:Delete')
+                    },
+                    // 添加“训练”按钮
+                    train: {
+                        type: 'text',
+                        order: 5,
+                        show: auth('LtsmModelViewSet:Train'),
+                        text: '训练',
+                        click: async ({ row }) => {
+                            try {
+                                const { longitude, latitude, altitude } = row;
+                                const response = await trainSinglePoint({ longitude, latitude, altitude });
+                                if (response.data.message === '模型训练成功') {
+                                    // 更新训练状态为成功
+                                    row.trainStatus = '成功';
+                                    // 刷新当前行的数据
+                                    await editRequest({ form: row, row });
+                                    // 刷新列表
+                                    crudExpose.doRefresh();
+                                }
+                            } catch (error) {
+                                // 更新训练状态为失败
+                                row.trainStatus = '失败';
+                                // 刷新当前行的数据
+                                await editRequest({ form: row, row });
+                                // 刷新列表
+                                crudExpose.doRefresh();
+                                // 处理训练失败的情况
+                                console.error('训练失败:', error);
+                            }
+                        }
                     },
                 },
             },

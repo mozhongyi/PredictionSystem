@@ -49,3 +49,12 @@ export function exportData(params:any){
         method: 'get'                           // GET 请求
     })
 }
+
+// 新增训练单个点的接口调用函数
+export function trainSinglePoint(data: { longitude: number; latitude: number; altitude: number }) {
+    return request({
+        url: apiPrefix + 'lstm-trainsingle/',
+        method: 'post',
+        data: data
+    });
+}

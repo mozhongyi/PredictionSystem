@@ -36,3 +36,4 @@ seaborn
 scikit-learn
 plotly
 chardet
+psutil
