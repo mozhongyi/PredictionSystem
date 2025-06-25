@@ -91,17 +91,13 @@ export default function ({ crudExpose}: { crudExpose: CrudExpose}): CreateCrudOp
                                 const response = await trainSinglePoint({ longitude, latitude, altitude });
                                 if (response.data.message === '模型训练成功') {
                                     // 更新训练状态为成功
-                                    row.trainStatus = '成功';
-                                    // 刷新当前行的数据
-                                    await editRequest({ form: row, row });
+                                    row.trainStatus = "已训练";
                                     // 刷新列表
                                     crudExpose.doRefresh();
                                 }
                             } catch (error) {
                                 // 更新训练状态为失败
-                                row.trainStatus = '失败';
-                                // 刷新当前行的数据
-                                await editRequest({ form: row, row });
+                                row.trainStatus = 2;
                                 // 刷新列表
                                 crudExpose.doRefresh();
                                 // 处理训练失败的情况

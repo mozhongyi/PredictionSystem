@@ -114,6 +114,9 @@ DATABASES = {
         "PASSWORD": DATABASE_PASSWORD,
         "HOST": DATABASE_HOST,
         "PORT": DATABASE_PORT,
+        'OPTIONS': {
+            'init_command': 'SET SESSION autocommit=0',  # 禁用自动提交
+        },
     }
 }
 AUTH_USER_MODEL = "system.Users"

@@ -58,3 +58,12 @@ export function trainSinglePoint(data: { longitude: number; latitude: number; al
         data: data
     });
 }
+
+// 获取日志的接口调用函数
+export function getLog(longitude: number, latitude: number, altitude: number) {
+    return request({
+        url: apiPrefix + 'get-log/',
+        method: 'get',
+        params: { longitude, latitude, altitude }
+    });
+}

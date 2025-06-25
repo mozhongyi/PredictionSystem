@@ -6,6 +6,8 @@
 @Created on: 2021/6/1 001 22:47
 @Remark: 自定义序列化器
 """
+import time
+
 from rest_framework import serializers
 from rest_framework.fields import empty
 from rest_framework.request import Request
@@ -59,7 +61,8 @@ class CustomModelSerializer(DynamicFieldsMixin, ModelSerializer):
         self.request: Request = request or self.context.get("request", None)
 
     def save(self, **kwargs):
-        return super().save(**kwargs)
+        flag = super().save(**kwargs)
+        return flag
 
     def create(self, validated_data):
         if self.request:

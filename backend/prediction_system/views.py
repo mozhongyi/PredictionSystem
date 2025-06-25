@@ -1,5 +1,8 @@
+import os
+import time
+
 from prediction_system.models import WaterInfoModel,LstmTrainStatusModel
-from prediction_system.serializers import WaterInfoModelSerializer, WaterInfoModelCreateUpdateSerializer, WaterInfoModelImportSerializer, ExportWaterInfoModelSerializer,LstmTrainStatusModelSerializer
+from prediction_system.serializers import WaterInfoModelSerializer, WaterInfoModelCreateUpdateSerializer, WaterInfoModelImportSerializer, ExportWaterInfoModelSerializer,LstmTrainStatusModelSerializer,LstmTrainStatusModelCreateUpdateSerializer
 from dvadmin.utils.viewset import CustomModelViewSet
 from model.LstmModel import LstmModelTrainSingle
 
@@ -7,6 +10,7 @@ from django.db import transaction
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework import status
+import chardet
 
 import pandas as pd
 import logging
@@ -84,6 +88,7 @@ class WaterInfoModelViewSet(CustomModelViewSet):
 class LtsmModelViewSet(CustomModelViewSet):
     serializer_class = LstmTrainStatusModelSerializer
     queryset = LstmTrainStatusModel.objects.all()
+    update_serializer_class = LstmTrainStatusModelCreateUpdateSerializer
 
     # Lstm模型训练单个点函数
     @action(detail=False, methods=['post'], url_path='lstm-trainsingle')
@@ -109,6 +114,14 @@ class LtsmModelViewSet(CustomModelViewSet):
                 altitude=altitude
             )
 
+            # 获取或创建对应的训练状态记录
+            status_instance, created = LstmTrainStatusModel.objects.get_or_create(
+                longitude=longitude,
+                latitude=latitude,
+                altitude=altitude,
+                defaults={'is_train': 0}  # 默认未训练状态
+            )
+
             # 检查是否有匹配的数据
             if not filtered_data.exists():
                 return Response({
@@ -123,21 +136,105 @@ class LtsmModelViewSet(CustomModelViewSet):
             # result为'success'表示所有模型训练成功,否则表示失败
             result = LstmModelTrainSingle(df)
 
-            # 根据返回结果判断训练是否成功
-            if result == 'success':
-                return Response({
-                    'message': '模型训练成功',
-                    'data_count': len(df),
-                }, status=status.HTTP_200_OK)
-            else:
+            # 使用事务确保更新原子性
+            with transaction.atomic():
+                if result == 'success':
+                    # 方案：使用更新序列化器处理数据更新
+                    update_data = {'is_train': 1}
+                    serializer = self.update_serializer_class(
+                        status_instance,
+                        data=update_data,
+                        partial=True
+                    )
+                    serializer.is_valid(raise_exception=True)
+                    updated_instance = serializer.save()
 
-                return Response({
-                    'detail': '模型训练失败',
-                    'error': result
-                }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                    return Response({
+                        'message': '模型训练成功',
+                        'data_count': len(df),
+                    }, status=status.HTTP_200_OK)
+                else:
+                    # 训练失败时更新状态
+                    update_data = {'is_train': 2}
+                    serializer = self.update_serializer_class(
+                        status_instance,
+                        data=update_data,
+                        partial=True
+                    )
+                    serializer.is_valid(raise_exception=True)
+                    serializer.save()
+
+                    return Response({
+                        'detail': '模型训练失败',
+                        'error': result,
+                        'status': 2
+                    }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         except Exception as e:
+            # 异常处理中更新状态
+            with transaction.atomic():
+                if 'status_instance' in locals():
+                    update_data = {'is_train': 2}
+                    serializer = self.update_serializer_class(
+                        status_instance,
+                        data=update_data,
+                        partial=True
+                    )
+                    serializer.is_valid(raise_exception=False)  # 异常时不严格验证
+                    serializer.save()
+
             return Response({
                 'detail': '模型训练失败',
                 'error': str(e)
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    # 获取日志的接口（改进版）
+    @action(detail=False, methods=['get'], url_path='get-log')
+    def get_log(self, request):
+        # 获取前端传入的经纬度和高程信息
+        longitude = request.query_params.get('longitude')
+        latitude = request.query_params.get('latitude')
+        altitude = request.query_params.get('altitude')
+
+        # 验证必要参数
+        if not all([longitude, latitude, altitude]):
+            return Response({
+                'detail': '缺少必要参数：经度、纬度和高程',
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        # 组装目标日志路径（使用更规范的文件名格式）
+        log_path = f'lstm_logs/({longitude},{latitude},{altitude})training.log'
+
+        # 确保日志目录存在
+        log_dir = os.path.dirname(log_path)
+        if not os.path.exists(log_dir):
+            os.makedirs(log_dir, exist_ok=True)
+
+        # 检查日志文件是否存在
+        if os.path.exists(log_path):
+            try:
+                # 方案1：自动检测文件编码（推荐）
+                with open(log_path, 'rb') as f:
+                    raw_data = f.read(2048)  # 读取前2KB用于检测编码
+                    encoding = chardet.detect(raw_data)['encoding'] or 'utf-8'
+
+                # 使用检测到的编码读取文件
+                with open(log_path, 'r', encoding=encoding) as file:
+                    log_content = file.read()
+
+                return Response({
+                    'message': f'日志获取成功（编码: {encoding}）',
+                    'log_content': log_content
+                }, status=status.HTTP_200_OK)
+
+            except Exception as e:
+                return Response({
+                    'detail': f'读取日志文件失败: {str(e)}',
+                    'error': '编码检测或读取异常'
+                }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        else:
+            return Response({
+                'detail': '未找到对应的日志文件',
+                'suggestion': f'请确认训练已开始，日志路径: {log_path}'
+            }, status=status.HTTP_404_NOT_FOUND)
