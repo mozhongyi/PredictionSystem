@@ -205,11 +205,6 @@ class LtsmModelViewSet(CustomModelViewSet):
         # 组装目标日志路径（使用更规范的文件名格式）
         log_path = f'lstm_logs/({longitude},{latitude},{altitude})training.log'
 
-        # 确保日志目录存在
-        log_dir = os.path.dirname(log_path)
-        if not os.path.exists(log_dir):
-            os.makedirs(log_dir, exist_ok=True)
-
         # 检查日志文件是否存在
         if os.path.exists(log_path):
             try:
@@ -223,18 +218,16 @@ class LtsmModelViewSet(CustomModelViewSet):
                     log_content = file.read()
 
                 return Response({
-                    'message': f'日志获取成功（编码: {encoding}）',
-                    'log_content': log_content
+                    'status': '200',
+                    'data': log_content
                 }, status=status.HTTP_200_OK)
 
             except Exception as e:
                 return Response({
-                    'detail': f'读取日志文件失败: {str(e)}',
-                    'error': '编码检测或读取异常'
+                    'status': '500'
                 }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         else:
             return Response({
-                'detail': '未找到对应的日志文件',
-                'suggestion': f'请确认训练已开始，日志路径: {log_path}'
+                'status': '404'
             }, status=status.HTTP_404_NOT_FOUND)

@@ -5,7 +5,8 @@ import { request } from '/@/utils/service';
 import {auth} from "/@/utils/authFunction";
 
 // 导入训练单个点的接口
-import { trainSinglePoint } from './api';
+import { trainSinglePoint,getLog } from './api';
+
 
 //此处为crudOptions配置
 export default function ({ crudExpose}: { crudExpose: CrudExpose}): CreateCrudOptionsRet {
@@ -105,6 +106,63 @@ export default function ({ crudExpose}: { crudExpose: CrudExpose}): CreateCrudOp
                             }
                         }
                     },
+                    trainLog:{
+                        type: 'text',
+                        order: 6,
+                        show: auth('LtsmModelViewSet:GetLog'),
+                        text: '训练日志',
+                        click: async ({ row }) =>{
+                            try{
+                                const { longitude, latitude, altitude } = row;
+                                const response = await getLog( longitude, latitude, altitude );
+                                console.log('response 对象:',response)
+                                console.log('response.status = ',response.status)
+                                if (response.status === '200')
+                                {
+                                    const logContent = response.data;
+                                    // 创建一个文本框元素
+                                    const textarea = document.createElement('textarea');
+                                    textarea.value = logContent;
+                                    textarea.style.width = '80%';
+                                    textarea.style.height = '300px';
+                                    textarea.style.position = 'fixed';
+                                    textarea.style.top = '50%';
+                                    textarea.style.left = '50%';
+                                    textarea.style.transform = 'translate(-50%, -50%)';
+                                    textarea.style.zIndex = '9999';
+                                    textarea.style.border = '1px solid #ccc';
+                                    textarea.style.padding = '10px';
+                                    textarea.style.backgroundColor = 'white';
+                                    textarea.readOnly = true;
+
+                                    // 创建一个关闭按钮
+                                    const closeButton = document.createElement('button');
+                                    closeButton.textContent = '关闭';
+                                    closeButton.style.position = 'fixed';
+                                    closeButton.style.top = 'calc(50% + 150px)';
+                                    closeButton.style.left = '50%';
+                                    closeButton.style.transform = 'translateX(-50%)';
+                                    closeButton.style.zIndex = '10000';
+                                    closeButton.addEventListener('click', () => {
+                                        document.body.removeChild(textarea);
+                                        document.body.removeChild(closeButton);
+                                    });
+
+                                    // 将文本框和关闭按钮添加到页面中
+                                    document.body.appendChild(textarea);
+                                    document.body.appendChild(closeButton);
+                                }
+                                else
+                                {
+                                    console.error('获取训练日志失败:', response.data.detail);
+                                }
+
+
+                            } catch (error) {
+                                console.error('获取训练日志失败:', error);
+                            }
+                        }
+                    }
                 },
             },
             columns: {
