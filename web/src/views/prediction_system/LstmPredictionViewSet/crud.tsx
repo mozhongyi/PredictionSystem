@@ -180,8 +180,6 @@ export default function ({ crudExpose}: { crudExpose: CrudExpose}): CreateCrudOp
                                     crudExpose.doRefresh();
                                 }
                             } catch (error) {
-                                // 更新训练状态为失败
-                                row.trainStatus = 2;
                                 // 刷新列表
                                 crudExpose.doRefresh();
                                 // 处理训练失败的情况

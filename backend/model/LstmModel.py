@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 import pandas as pd
 import numpy as np
 import torch
@@ -27,6 +29,7 @@ import matplotlib.pyplot as plt
 def split_data(target, lookback, test_ratio=0.1, val_ratio=0.1):
     data_raw = target.to_numpy()
     data = []
+    x_latest = []
 
     # 构建序列数据
     for index in range(len(data_raw) - lookback + 1):
@@ -37,11 +40,15 @@ def split_data(target, lookback, test_ratio=0.1, val_ratio=0.1):
     # 计算数据集大小
     total_size = data.shape[0]
     test_set_size = int(total_size * test_ratio)
+    # 剩余数据集大小
+    total_size = total_size - test_set_size
+    # 从剩余数据集中拿0.1来当验证集
     val_set_size = int(total_size * val_ratio)
-    train_set_size = total_size - test_set_size - val_set_size
+    # 剩下全部当训练集
+    train_set_size = total_size - val_set_size
 
     # 分割数据集
-    # 注意:不可以写为y_train = data[:train_set_size, -1, -1],这样写维度会报错
+    # 注意:不可以写为y_train = data[:train_set_size, -1, 1:],这样写维度会报错
     x_train = data[:train_set_size, :-1, :]
     y_train = data[:train_set_size, -1, 1:]
 
@@ -51,7 +58,10 @@ def split_data(target, lookback, test_ratio=0.1, val_ratio=0.1):
     x_test = data[train_set_size + val_set_size:, :-1, :]
     y_test = data[train_set_size + val_set_size:, -1, 1:]
 
-    return [x_train, y_train, x_val, y_val, x_test, y_test]
+    x_latest.append(data_raw[(len(data_raw) - lookback + 1):])
+    x_latest = np.array(x_latest);
+
+    return [x_train, y_train, x_val, y_val, x_test, y_test, x_latest]
 
 # LSTM模型
 class LSTM(nn.Module):
@@ -122,6 +132,11 @@ def LstmModelTrainSingle(Data, lookback = 30, input_dim = 2,hidden_dim = 60,num_
         # 提取标签
         target = Data[['rainfall', 'water_quantity']].copy()
 
+        # 获取最新的一天
+        latest_date = Data['date'].iloc[-1]  # 读取最后一行的日期
+        # 计算后一天
+        next_day = latest_date + timedelta(days=1)
+
         # 归一化
         scaler = MinMaxScaler(feature_range=(-1, 1))
         target['rainfall'] = scaler.fit_transform(target['rainfall'].values.reshape(-1, 1))
@@ -133,13 +148,14 @@ def LstmModelTrainSingle(Data, lookback = 30, input_dim = 2,hidden_dim = 60,num_
         # 保存标准化参数
         joblib.dump(scaler, best_scaler_path)
 
-        x_train, y_train, x_val, y_val, x_test, y_test = split_data(target, lookback)
+        x_train, y_train, x_val, y_val, x_test, y_test, x_latest = split_data(target, lookback)
         print('x_train.shape = ', x_train.shape)
         print('y_train.shape = ', y_train.shape)
         print('x_val.shape = ', x_val.shape)
         print('y_val.shape = ', y_val.shape)
         print('x_test.shape = ', x_test.shape)
         print('y_test.shape = ', y_test.shape)
+        print('x_latest.shape = ', x_latest.shape)
 
         # 转换成张量,神经网络模型的数据要求为张量类型
         x_train = torch.from_numpy(x_train).type(torch.Tensor)
@@ -148,6 +164,7 @@ def LstmModelTrainSingle(Data, lookback = 30, input_dim = 2,hidden_dim = 60,num_
         y_train_lstm = torch.from_numpy(y_train).type(torch.Tensor)
         y_val_lstm = torch.from_numpy(y_val).type(torch.Tensor)
         y_test_lstm = torch.from_numpy(y_test).type(torch.Tensor)
+        x_latest_tensor = torch.from_numpy(x_latest).type(torch.Tensor)
 
         # 模型实例化准备开始训练
         model = LSTM(input_dim=input_dim, hidden_dim=hidden_dim, output_dim=output_dim, num_layers=num_layers)
@@ -238,6 +255,7 @@ def LstmModelTrainSingle(Data, lookback = 30, input_dim = 2,hidden_dim = 60,num_
             y_test_pred = model(x_test)
             y_train_pred = model(x_train)
             y_val_pred = model(x_val)
+            y_latest_pred = model(x_latest_tensor)
 
         # 归一化数据回到原来状态
         y_train_pred = scaler.inverse_transform(y_train_pred.detach().numpy())
@@ -246,6 +264,7 @@ def LstmModelTrainSingle(Data, lookback = 30, input_dim = 2,hidden_dim = 60,num_
         y_val = scaler.inverse_transform(y_val_lstm.detach().numpy())
         y_test_pred = scaler.inverse_transform(y_test_pred.detach().numpy())
         y_test = scaler.inverse_transform(y_test_lstm.detach().numpy())
+        y_latest_pred = scaler.inverse_transform(y_latest_pred.detach().numpy())
 
         # 计算训练集、验证集和测试集的均方误差
         trainScore = math.sqrt(mean_squared_error(y_train[:, 0], y_train_pred[:, 0]))
@@ -259,24 +278,32 @@ def LstmModelTrainSingle(Data, lookback = 30, input_dim = 2,hidden_dim = 60,num_
         new_target = target[['water_quantity']]
 
         # 转换数据
-        trainPredictPlot = np.empty_like(new_target)
-        trainPredictPlot[:, 0] = np.nan
+        trainPredictPlot = np.empty((len(new_target) + 1, new_target.shape[1]))
+        trainPredictPlot[:] = np.nan  # 初始化为NaN
         trainPredictPlot[lookback - 1:len(y_train_pred) + lookback - 1, :] = y_train_pred
 
-        valPredictPlot = np.empty_like(new_target)
-        valPredictPlot[:, 0] = np.nan
+        valPredictPlot = np.empty((len(new_target) + 1, new_target.shape[1]))
+        valPredictPlot[:] = np.nan  # 初始化为NaN
         valPredictPlot[len(y_train_pred) + lookback - 1:len(y_train_pred) + lookback - 1 + len(y_val_pred),
         :] = y_val_pred
 
-        testPredictPlot = np.empty_like(new_target)
-        testPredictPlot[:, :] = np.nan
-        testPredictPlot[len(y_train_pred) + lookback - 1 + len(y_val_pred):, :] = y_test_pred
+        testPredictPlot = np.empty((len(new_target) + 1, new_target.shape[1]))
+        testPredictPlot[:] = np.nan  # 初始化为NaN
+        testPredictPlot[len(y_train_pred) + lookback - 1 + len(y_val_pred):-1, :] = y_test_pred
 
         original = scaler.inverse_transform(target['water_quantity'].values.reshape(-1, 1))
+        originPlot = np.empty((len(new_target) + 1, new_target.shape[1]))
+        originPlot[:] = np.nan  # 初始化为NaN
+        originPlot[0:original.shape[0], :] = original
+
+        latestPredictPlot = np.empty((len(new_target) + 1, new_target.shape[1]))
+        latestPredictPlot[:] = np.nan  # 初始化为NaN
+        latestPredictPlot[-1:, :] = y_latest_pred
 
         predictions = np.append(trainPredictPlot, valPredictPlot, axis=1)
         predictions = np.append(predictions, testPredictPlot, axis=1)
-        predictions = np.append(predictions, original, axis=1)
+        predictions = np.append(predictions, originPlot, axis=1)
+        predictions = np.append(predictions, latestPredictPlot, axis=1)
         result = pd.DataFrame(predictions)
 
         # 将集合好的result画图可视化
@@ -293,6 +320,30 @@ def LstmModelTrainSingle(Data, lookback = 30, input_dim = 2,hidden_dim = 60,num_
         fig.add_trace(go.Scatter(go.Scatter(x=result.index, y=result[3],
                                             mode='lines',
                                             name='Actual Value')))
+        # 新增预测最新值的散点图（明显标注的点+数值标签）
+        fig.add_trace(go.Scatter(
+            x=result.index,
+            y=result[4],  # 第5列：预测最新值
+            mode='markers+text',  # 同时显示标记点和文本
+            name=f'{next_day} Predict Latest Value',
+            marker=dict(
+                size=12,  # 点的大小
+                color='red',  # 点的颜色
+                symbol='circle',  # 点的形状
+                line=dict(  # 点的边框
+                    width=2,
+                    color='white'
+                ),
+                opacity=0.8  # 点的透明度
+            ),
+            text=[f"{y:.2f}" for y in result[4]],  # 标签文本（保留两位小数）
+            textposition='top center',  # 文本位置（点的上方居中）
+            textfont=dict(
+                family="Rockwell",
+                size=14,
+                color="white"
+            )
+        ))
         fig.update_layout(
             title={
                 'text': f'{name}真实值vs预测值',  # 替换为您的标题文本
