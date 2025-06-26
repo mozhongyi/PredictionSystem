@@ -12,6 +12,8 @@ from rest_framework.response import Response
 from rest_framework import status
 import chardet
 
+from django.http.response import HttpResponse
+
 import pandas as pd
 import logging
 
@@ -230,4 +232,42 @@ class LtsmModelViewSet(CustomModelViewSet):
         else:
             return Response({
                 'status': '404'
+            }, status=status.HTTP_404_NOT_FOUND)
+
+    # 获取模型可视化图片的接口
+    @action(detail=False, methods=['get'], url_path='get_lstm_image')
+    def get_visualization_image(self, request):
+        # 获取前端传入的经纬度和高程信息
+        longitude = request.query_params.get('longitude')
+        latitude = request.query_params.get('latitude')
+        altitude = request.query_params.get('altitude')
+
+        # 验证必要参数
+        if not all([longitude, latitude, altitude]):
+            return Response({
+                'detail': '缺少必要参数：经度、纬度和高程',
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        # 组装目标图片路径（使用更规范的文件名格式）
+        image_path = f'lstm_images/({longitude},{latitude},{altitude})真实值vs预测值.png'
+
+        # 检查图片文件是否存在
+        if os.path.exists(image_path):
+            try:
+                # 读取图片文件
+                with open(image_path, 'rb') as file:
+                    image_data = file.read()
+
+                # 响应图片数据给前端
+                return HttpResponse(image_data, content_type='image/jpg')
+                #return Response(image_data, status=status.HTTP_200_OK, content_type='image/png')
+
+            except Exception as e:
+                return Response({
+                    'detail': f'读取图片失败: {str(e)}',
+                }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        else:
+            return Response({
+                'detail': '未找到对应的可视化图片',
             }, status=status.HTTP_404_NOT_FOUND)

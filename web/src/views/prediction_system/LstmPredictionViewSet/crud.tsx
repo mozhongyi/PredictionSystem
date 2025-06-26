@@ -5,7 +5,7 @@ import { request } from '/@/utils/service';
 import {auth} from "/@/utils/authFunction";
 
 // 导入训练单个点的接口
-import { trainSinglePoint,getLog } from './api';
+import { trainSinglePoint,getLog, get_lstm_image } from './api';
 
 
 //此处为crudOptions配置
@@ -143,6 +143,13 @@ export default function ({ crudExpose}: { crudExpose: CrudExpose}): CreateCrudOp
                                     closeButton.style.left = '50%';
                                     closeButton.style.transform = 'translateX(-50%)';
                                     closeButton.style.zIndex = '10000';
+                                    // 修改按钮样式以增大按钮
+                                    closeButton.style.fontSize = '20px'; // 增大字体大小
+                                    closeButton.style.padding = '10px 20px'; // 增加内边距
+                                    closeButton.style.minWidth = '120px'; // 设置最小宽度
+                                    // 设置按钮背景颜色和文字颜色
+                                    closeButton.style.backgroundColor = 'red'; // 背景颜色，可根据需要修改
+                                    closeButton.style.color = 'white'; // 文字颜色，可根据需要修改
                                     closeButton.addEventListener('click', () => {
                                         document.body.removeChild(textarea);
                                         document.body.removeChild(closeButton);
@@ -160,6 +167,66 @@ export default function ({ crudExpose}: { crudExpose: CrudExpose}): CreateCrudOp
 
                             } catch (error) {
                                 console.error('获取训练日志失败:', error);
+                            }
+                        }
+                    },
+                    // 添加“可视化”按钮
+                    visualization:{
+                        type: 'text',
+                        order: 7,
+                        show: auth('LtsmModelViewSet:GetLstmVisualization'),
+                        text: '可视化',
+                        click: async ({ row }) =>{
+                            try{
+                                const { longitude, latitude, altitude } = row;
+                                const response = await get_lstm_image({ longitude, latitude, altitude });
+                                if (response.status === 200)
+                                {
+                                    const imgUrl = URL.createObjectURL(new Blob([response.data], { type: 'image/png' }));
+                                    const img = document.createElement('img');
+                                    img.src = imgUrl;
+                                    img.style.maxWidth = '80%';
+                                    img.style.maxHeight = '80%';
+                                    img.style.position = 'fixed';
+                                    img.style.top = '50%';
+                                    img.style.left = '50%';
+                                    img.style.transform = 'translate(-50%, -50%)';
+                                    img.style.zIndex = '9999';
+                                    img.style.border = '1px solid #ccc';
+                                    img.style.padding = '10px';
+                                    img.style.backgroundColor = 'white';
+
+                                    const closeButton = document.createElement('button');
+                                    closeButton.textContent = '关闭';
+                                    closeButton.style.position = 'fixed';
+                                    closeButton.style.top = 'calc(50% + 40%)';
+                                    closeButton.style.left = '50%';
+                                    closeButton.style.transform = 'translateX(-50%)';
+                                    closeButton.style.zIndex = '10000';
+
+                                    // 修改按钮样式以增大按钮
+                                    closeButton.style.fontSize = '20px'; // 增大字体大小
+                                    closeButton.style.padding = '10px 20px'; // 增加内边距
+                                    closeButton.style.minWidth = '120px'; // 设置最小宽度
+                                    // 设置按钮背景颜色和文字颜色
+                                    closeButton.style.backgroundColor = 'red'; // 背景颜色，可根据需要修改
+                                    closeButton.style.color = 'white'; // 文字颜色，可根据需要修改
+
+                                    closeButton.addEventListener('click', () => {
+                                        document.body.removeChild(img);
+                                        document.body.removeChild(closeButton);
+                                        URL.revokeObjectURL(imgUrl);
+                                    });
+
+                                    document.body.appendChild(img);
+                                    document.body.appendChild(closeButton);
+                                }
+                                else
+                                {
+                                    console.error('获取可视化图片失败:', response.data.detail);
+                                }
+                            }catch (error) {
+                                console.error('获取可视化图片失败:', error);
                             }
                         }
                     }

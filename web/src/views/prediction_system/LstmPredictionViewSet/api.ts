@@ -67,3 +67,13 @@ export function getLog(longitude: number, latitude: number, altitude: number) {
         params: { longitude, latitude, altitude }
     });
 }
+
+// 获取Lstm可视化图片的接口调用函数
+export function get_lstm_image(data: { longitude: number; latitude: number; altitude: number }) {
+    return request({
+        url: apiPrefix + 'get_lstm_image/',
+        method: 'get',
+        params: data,
+        responseType: 'blob' // 因为返回的是图片二进制数据，所以设置响应类型为 blob
+    });
+}
