@@ -87,8 +87,91 @@ export default function ({ crudExpose}: { crudExpose: CrudExpose}): CreateCrudOp
                         show: auth('LtsmModelViewSet:Train'),
                         text: '训练',
                         click: async ({ row }) => {
+                            let pollInterval: any = null; // 轮询定时器
+                            let logTextarea: HTMLTextAreaElement | null = null; // 日志文本框引用
+                            let closeButton: HTMLButtonElement | null = null; // 关闭按钮引用
+                            let isTrainingCompleted = false; // 训练是否完成标志
                             try {
+                                // 显示加载状态
+                                row.loading = true;
                                 const { longitude, latitude, altitude } = row;
+
+                                // 1. 训练开始即创建日志显示框
+                                logTextarea = document.createElement('textarea');
+                                logTextarea.value = '训练开始，正在获取日志...';
+                                logTextarea.style.width = '80%';
+                                logTextarea.style.height = '400px';
+                                logTextarea.style.position = 'fixed';
+                                logTextarea.style.top = '50%';
+                                logTextarea.style.left = '50%';
+                                logTextarea.style.transform = 'translate(-50%, -50%)';
+                                logTextarea.style.zIndex = '9999';
+                                logTextarea.style.border = '1px solid #ccc';
+                                logTextarea.style.padding = '10px';
+                                logTextarea.style.backgroundColor = 'white';
+                                logTextarea.readOnly = true;
+
+                                closeButton = document.createElement('button');
+                                closeButton.textContent = '关闭';
+                                closeButton.style.position = 'fixed';
+                                closeButton.style.top = 'calc(50% + 200px)';
+                                closeButton.style.left = '50%';
+                                closeButton.style.transform = 'translateX(-50%)';
+                                closeButton.style.zIndex = '10000';
+                                closeButton.style.fontSize = '20px';
+                                closeButton.style.padding = '10px 20px';
+                                closeButton.style.minWidth = '120px';
+                                closeButton.style.backgroundColor = 'red';
+                                closeButton.style.color = 'white';
+
+                                // 确保清理资源
+                                function stopPolling() {
+                                    if (pollInterval) {
+                                        clearInterval(pollInterval);
+                                        pollInterval = null;
+                                    }
+                                }
+
+                                function removeLogElements() {
+                                    if (logTextarea) {
+                                        document.body.removeChild(logTextarea);
+                                        logTextarea = null;
+                                    }
+                                    if (closeButton) {
+                                        document.body.removeChild(closeButton);
+                                        closeButton = null;
+                                    }
+                                }
+
+                                // 关闭按钮事件：停止轮询并移除元素
+                                closeButton.addEventListener('click', () => {
+                                    stopPolling();
+                                    removeLogElements();
+                                });
+
+                                document.body.appendChild(logTextarea);
+                                document.body.appendChild(closeButton);
+
+                                // 2. 启动轮询获取日志（每秒一次）
+                                function startPolling() {
+                                    pollInterval = setInterval(async () => {
+                                        if (!logTextarea || isTrainingCompleted) return;
+                                        try {
+                                            const logResponse = await getLog(longitude, latitude, altitude);
+                                            console.log('logResponse : ',logResponse);
+                                            if (logResponse.status === '200') {
+                                                logTextarea.value = logResponse.data;
+                                                // 滚动到日志底部
+                                                logTextarea.scrollTop = logTextarea.scrollHeight;
+                                            }
+                                        } catch (logError) {
+                                            logTextarea.value += `\n获取日志失败: ${logError.message}`;
+                                        }
+                                    }, 1000); // 1秒轮询一次
+                                }
+
+                                startPolling(); // 立即开始轮询
+
                                 const response = await trainSinglePoint({ longitude, latitude, altitude });
                                 if (response.data.message === '模型训练成功') {
                                     // 更新训练状态为成功
@@ -103,7 +186,28 @@ export default function ({ crudExpose}: { crudExpose: CrudExpose}): CreateCrudOp
                                 crudExpose.doRefresh();
                                 // 处理训练失败的情况
                                 console.error('训练失败:', error);
+                            } finally{
+                                // 确保清理资源
+                                function stopPolling() {
+                                    if (pollInterval) {
+                                        clearInterval(pollInterval);
+                                        pollInterval = null;
+                                    }
+                                }
+
+                                // 训练结束后等待3秒停止轮询（给日志最后写入时间）
+                                setTimeout(() => {
+                                    stopPolling();
+                                    if (logTextarea) {
+                                        logTextarea.value += "\n\n日志获取结束";
+                                    }
+                                }, 3000);
+
+                                // 训练结束后清理
+                                row.loading = false;
+                                crudExpose.doRefresh();
                             }
+
                         }
                     },
                     trainLog:{
