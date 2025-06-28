@@ -55,6 +55,9 @@ def import_to_data(file_url, field_data, m2m_fields=None):
             if isinstance(values, dict):
                 value_type = values.get('type','str')
             cell_value = table.cell(row=row + 1, column=index + 2).value
+            # 添加这句
+            if isinstance(cell_value, datetime) and str(cell_value.time()) == "00:00:00":
+                value_type = "date"
             if cell_value is None or cell_value=='':
                 continue
             elif value_type == 'date':

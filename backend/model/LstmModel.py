@@ -111,7 +111,7 @@ class Logger:
 # num_layers:LSTM层数
 # output_dim:模型输出的维度
 # num_epochs:训练轮数
-def LstmModelTrainSingle(Data, lookback = 30, input_dim = 2,hidden_dim = 60,num_layers = 3,output_dim = 1,num_epochs = 100):
+def LstmModelTrainSingle(Data, lookback = 30, input_dim = 2,hidden_dim = 60,num_layers = 3,output_dim = 1,num_epochs = 1000):
     # 创建日志目录
     os.makedirs('lstm_logs', exist_ok=True)
     # 该目录用于保存最优模型参数

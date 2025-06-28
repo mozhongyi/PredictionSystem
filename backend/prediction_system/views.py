@@ -1,10 +1,15 @@
 import os
 import time
 
-from prediction_system.models import WaterInfoModel,LstmTrainStatusModel
-from prediction_system.serializers import WaterInfoModelSerializer, WaterInfoModelCreateUpdateSerializer, WaterInfoModelImportSerializer, ExportWaterInfoModelSerializer,LstmTrainStatusModelSerializer,LstmTrainStatusModelCreateUpdateSerializer
+from prediction_system.models import WaterInfoModel,LstmTrainStatusModel,WaterLevelModel,WaterQualityModel,BPTrainStatusModel
+from prediction_system.serializers import WaterInfoModelSerializer, WaterInfoModelCreateUpdateSerializer, WaterInfoModelImportSerializer, ExportWaterInfoModelSerializer
+from prediction_system.serializers import LstmTrainStatusModelSerializer,LstmTrainStatusModelCreateUpdateSerializer
+from prediction_system.serializers import WaterLevelModelSerializer,WaterLevelModelCreateUpdateSerializer,WaterLevelModelImportSerializer,ExportWaterLevelModelSerializer
+from prediction_system.serializers import WaterQualityModelSerializer,WaterQualityModelCreateUpdateSerializer,WaterQualityModelImportSerializer,ExportWaterQualityModelSerializer
+from prediction_system.serializers import BPTrainStatusModelSerializer,BPTrainStatusModelCreateUpdateSerializer
 from dvadmin.utils.viewset import CustomModelViewSet
 from model.LstmModel import LstmModelTrainSingle
+from model.BPModel import BPTrain
 
 from django.db import transaction
 from rest_framework.decorators import action
@@ -19,6 +24,9 @@ import logging
 
 
 # 涌水量信息视图类，用于管理WaterInfo表的所有信息
+from rest_framework.status import HTTP_201_CREATED
+
+
 class WaterInfoModelViewSet(CustomModelViewSet):
     """
     list:查询
@@ -271,3 +279,198 @@ class LtsmModelViewSet(CustomModelViewSet):
             return Response({
                 'detail': '未找到对应的可视化图片',
             }, status=status.HTTP_404_NOT_FOUND)
+
+
+# 水位信息视图类，用于管理水位信息
+class WaterLevelModelViewset(CustomModelViewSet):
+    # 功能说明:导入的配置
+    import_field_dict = {
+        "date": {
+            "title": '日期',
+            "display": 'date',
+            "type": "date"
+        },
+        "longitude": "经度",
+        "latitude": "纬度",
+        "altitude": "高程",
+        "water_level": "水位"
+    }
+
+    export_field_label = {
+        "date": {
+            "title": '日期',
+            "display": 'date',
+            "type": "date"
+        },
+        "longitude": "经度",
+        "latitude": "纬度",
+        "altitude": "高程",
+        "water_level": "涌水量"
+    }
+
+    # 导入序列化器
+    import_serializer_class = WaterLevelModelImportSerializer
+    # 导出序列化器
+    export_serializer_class = ExportWaterLevelModelSerializer
+
+    queryset = WaterLevelModel.objects.all()
+    serializer_class = WaterLevelModelSerializer
+    create_serializer_class = WaterLevelModelCreateUpdateSerializer
+    update_serializer_class = WaterLevelModelCreateUpdateSerializer
+
+    # 一键删除的接口自定义, 删除涌水量信息表同时删除训练状态信息表
+    @action(detail=False, methods=['delete'], url_path='delete-all')
+    def delete_all(self, request):
+        """
+        删除所有涌水量信息数据
+        """
+        # 添加权限检查（可选但推荐）
+        if not request.user.has_perm('prediction_system.delete_waterlevelmodel'):
+            return Response({'detail': '权限不足'}, status=status.HTTP_403_FORBIDDEN)
+
+        # 执行删除操作
+        try:
+            # 使用事务确保操作的原子性
+            with transaction.atomic():
+                # 删除涌水量信息表的所有数据
+                water_deleted_count, _ = self.get_queryset().delete()
+            return Response({'message': f'成功删除水位信息表 {water_deleted_count} 条数据'},
+                            status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({'detail': f'删除失败: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+# 水质信息视图类，用于管理水质信息
+class WaterQualityModelViewset(CustomModelViewSet):
+    # 功能说明:导入的配置
+    import_field_dict = {
+        "longitude": "经度",
+        "latitude": "纬度",
+        "altitude": "高程",
+        "stratigraphic_lithology": "地层岩性",
+        "sulfate_ion_concentration": "硫酸根离子浓度",
+        "carbonate_ion_concentration": "碳酸根离子浓度",
+        "total_dissolved_solids": "溶解性总固体",
+        "ph": "pH",
+        "calcium_magnesium_ratio": "钙镁比值",
+        "eight_h": "8-H",
+        "eight_o": "8-O"
+    }
+
+    export_field_label = {
+        "longitude": "经度",
+        "latitude": "纬度",
+        "altitude": "高程",
+        "stratigraphic_lithology": "地层岩性",
+        "sulfate_ion_concentration": "硫酸根离子浓度",
+        "carbonate_ion_concentration": "碳酸根离子浓度",
+        "total_dissolved_solids": "溶解性总固体",
+        "ph": "pH",
+        "calcium_magnesium_ratio": "钙镁比值",
+        "eight_h": "8-H",
+        "eight_o": "8-O"
+    }
+
+    # 导入序列化器
+    import_serializer_class = WaterQualityModelImportSerializer
+    # 导出序列化器
+    export_serializer_class = ExportWaterQualityModelSerializer
+
+    queryset = WaterQualityModel.objects.all()
+    serializer_class = WaterQualityModelSerializer
+    create_serializer_class = WaterQualityModelCreateUpdateSerializer
+    update_serializer_class = WaterQualityModelCreateUpdateSerializer
+
+    # 一键删除的接口自定义
+    @action(detail=False, methods=['delete'], url_path='delete-all')
+    def delete_all(self, request):
+        """
+        删除所有水质点信息数据
+        """
+        # 添加权限检查（可选但推荐）
+        if not request.user.has_perm('prediction_system.delete_waterqualitypointmodel'):
+            return Response({'detail': '权限不足'}, status=status.HTTP_403_FORBIDDEN)
+
+        # 执行删除操作
+        try:
+            # 使用事务确保操作的原子性
+            with transaction.atomic():
+                # 删除水质点信息表的所有数据
+                deleted_count, _ = self.get_queryset().delete()
+            return Response({'message': f'成功删除水质点信息表 {deleted_count} 条数据'}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({'detail': f'删除失败: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+# BP 模型训练状态视图类，用于管理 BP 模型训练状态信息
+class BPTrainStatusModelViewSet(CustomModelViewSet):
+    serializer_class = BPTrainStatusModelSerializer
+    queryset = BPTrainStatusModel.objects.all()
+    create_serializer_class = BPTrainStatusModelCreateUpdateSerializer
+    update_serializer_class = BPTrainStatusModelCreateUpdateSerializer
+
+    # 一键删除的接口自定义
+    @action(detail=False, methods=['delete'], url_path='delete-all')
+    def delete_all(self, request):
+        """
+        删除所有水质点信息数据
+        """
+
+        # 执行删除操作
+        try:
+            # 使用事务确保操作的原子性
+            with transaction.atomic():
+                # 删除水质点信息表的所有数据
+                deleted_count, _ = self.get_queryset().delete()
+            return Response({'message': f'成功删除BP训练状态信息表 {deleted_count} 条数据'}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({'detail': f'删除失败: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    # 重写添加方法
+    def create(self, request):
+        # 仅获取模型名称（假设前端只传递 model_name）
+        model_name = request.data.get('model_name')
+        if not model_name:
+            return Response({'error': '模型名称不能为空'}, status=400)
+
+        # 获取 waterInfo 和 waterLevel 的数据
+        try:
+            water_info_data = WaterInfoModel.objects.all()
+            water_info_df = pd.DataFrame(list(water_info_data.values()))
+            # 转换需要的列
+            water_info_df['longitude'] = water_info_df['longitude'].astype(float)
+            water_info_df['latitude'] = water_info_df['latitude'].astype(float)
+            water_info_df['altitude'] = water_info_df['altitude'].astype(float)
+            water_info_df['rainfall'] = water_info_df['rainfall'].astype(float)
+            water_info_df['water_quantity'] = water_info_df['water_quantity'].astype(float)
+
+            water_level_data = WaterLevelModel.objects.all()
+            water_level_df = pd.DataFrame(list(water_level_data.values()))
+            # 转换需要的列
+            water_level_df['longitude'] = water_level_df['longitude'].astype(float)
+            water_level_df['latitude'] = water_level_df['latitude'].astype(float)
+            water_level_df['altitude'] = water_level_df['altitude'].astype(float)
+            water_level_df['water_level'] = water_level_df['water_level'].astype(float)
+        except Exception as e:
+            return Response({'error': f'获取数据失败: {str(e)}'}, status=500)
+
+        # 调用训练函数
+        try:
+            train_time, train_rmse, test_rmse, train_status = BPTrain(model_name, water_info_df, water_level_df)
+        except Exception as e:
+            return Response({'error': f'模型训练失败: {str(e)}'}, status=500)
+
+        # 构造完整数据
+        data = {
+            'model_name': model_name,
+            'training_time': train_time,
+            'train_rmse': train_rmse,
+            'test_rmse': test_rmse,
+            'train_status': train_status
+        }
+
+        # 使用序列化器验证并保存
+        serializer = self.get_serializer(data=data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=400)
+        serializer.save()
+
+        return Response({'message': '训练成功'}, status=HTTP_201_CREATED)

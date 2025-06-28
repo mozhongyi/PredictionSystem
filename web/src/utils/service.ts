@@ -17,7 +17,7 @@ import { successMessage } from './message.js';
 function createService() {
 	// 创建一个 axios 实例
 	const service = axios.create({
-		timeout: 20000,
+		timeout: 600000,
 		headers: {
 			'Content-Type': 'application/json;charset=utf-8',
 		},
@@ -174,7 +174,7 @@ function createRequestFunction(service: any) {
 			headers: {
 				'Content-Type': get(config, 'headers.Content-Type', 'application/json'),
 			},
-			timeout: 20000,
+			timeout: 600000,
 			baseURL: getBaseURL(),
 			data: {},
 		};

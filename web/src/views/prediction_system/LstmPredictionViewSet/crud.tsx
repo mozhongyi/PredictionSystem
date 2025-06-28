@@ -99,8 +99,8 @@ export default function ({ crudExpose}: { crudExpose: CrudExpose}): CreateCrudOp
                                 // 1. 训练开始即创建日志显示框
                                 logTextarea = document.createElement('textarea');
                                 logTextarea.value = '训练开始，正在获取日志...';
-                                logTextarea.style.width = '80%';
-                                logTextarea.style.height = '400px';
+                                logTextarea.style.width = '60%';
+                                logTextarea.style.height = '600px';
                                 logTextarea.style.position = 'fixed';
                                 logTextarea.style.top = '50%';
                                 logTextarea.style.left = '50%';
@@ -114,7 +114,7 @@ export default function ({ crudExpose}: { crudExpose: CrudExpose}): CreateCrudOp
                                 closeButton = document.createElement('button');
                                 closeButton.textContent = '关闭';
                                 closeButton.style.position = 'fixed';
-                                closeButton.style.top = 'calc(50% + 200px)';
+                                closeButton.style.top = 'calc(50% + 300px)';
                                 closeButton.style.left = '50%';
                                 closeButton.style.transform = 'translateX(-50%)';
                                 closeButton.style.zIndex = '10000';
@@ -226,7 +226,7 @@ export default function ({ crudExpose}: { crudExpose: CrudExpose}): CreateCrudOp
                                     const textarea = document.createElement('textarea');
                                     textarea.value = logContent;
                                     textarea.style.width = '80%';
-                                    textarea.style.height = '300px';
+                                    textarea.style.height = '600px';
                                     textarea.style.position = 'fixed';
                                     textarea.style.top = '50%';
                                     textarea.style.left = '50%';
@@ -241,7 +241,7 @@ export default function ({ crudExpose}: { crudExpose: CrudExpose}): CreateCrudOp
                                     const closeButton = document.createElement('button');
                                     closeButton.textContent = '关闭';
                                     closeButton.style.position = 'fixed';
-                                    closeButton.style.top = 'calc(50% + 150px)';
+                                    closeButton.style.top = 'calc(50% + 300px)';
                                     closeButton.style.left = '50%';
                                     closeButton.style.transform = 'translateX(-50%)';
                                     closeButton.style.zIndex = '10000';

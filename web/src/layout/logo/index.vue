@@ -1,13 +1,3 @@
-<template>
-	<div class="layout-logo" v-if="setShowLogo" @click="onThemeConfigChange">
-		<img :src="siteLogo" class="layout-logo-medium-img" />
-		<span style="font-size: x-large">{{ getSystemConfig['login.site_title'] || themeConfig.globalTitle }}</span>
-	</div>
-	<div class="layout-logo-size" v-else @click="onThemeConfigChange">
-		<img :src="siteLogo" class="layout-logo-size-img" />
-	</div>
-</template>
-
 <script setup lang="ts" name="layoutLogo">
 import { computed } from 'vue';
 import { storeToRefs } from 'pinia';

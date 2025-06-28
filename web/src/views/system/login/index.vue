@@ -2,11 +2,8 @@
 	<div class="login-container flex z-10">
 		<div class="login-left">
 			<div class="login-left-logo">
-				<img :src="siteLogo" />
 				<div class="login-left-logo-text">
-					<span>{{ getSystemConfig['login.site_title'] || getThemeConfig.globalViceTitle }}</span>
-					<span class="login-left-logo-text-msg" style="margin-top: 5px;">{{
-						getSystemConfig['login.site_name'] || getThemeConfig.globalViceTitleMsg }}</span>
+					<span>{{}}</span>
 				</div>
 			</div>
 		</div>
@@ -44,22 +41,6 @@
 			</div>
 		</div>
 
-		<div class="login-authorization z-10">
-			<p>Copyright © {{ getSystemConfig['login.copyright'] || '2021-2024 北京信码新创科技有限公司' }} 版权所有</p>
-			<p class="la-other" style="margin-top: 5px;">
-				<a href="https://beian.miit.gov.cn" target="_blank">{{ getSystemConfig['login.keep_record'] ||
-					'京ICP备2021031018号' }}</a>
-				|
-				<a :href="getSystemConfig['login.help_url'] ? getSystemConfig['login.help_url'] : '#'"
-					target="_blank">帮助</a>
-				|
-				<a
-					:href="getSystemConfig['login.privacy_url'] ? getBaseURL(getSystemConfig['login.privacy_url']) : '#'">隐私</a>
-				|
-				<a
-					:href="getSystemConfig['login.clause_url'] ? getBaseURL(getSystemConfig['login.clause_url']) : '#'">条款</a>
-			</p>
-		</div>
 	</div>
 	<div v-if="loginBg">
 		<img :src="loginBg" class="loginBg fixed inset-0 z-1 w-full h-full" />

@@ -38,7 +38,7 @@ export default function ({ crudExpose}: { crudExpose: CrudExpose}): CreateCrudOp
                 buttons: {
                     export:{
                         // 注释编号:django-vue3-admin-crud210716:注意这个auth里面的值，最好是使用index.vue文件里面的name值并加上请求动作的单词
-                        show: auth('WaterInfoModelViewSet:Export'),
+                        show: auth('WaterQualityModelViewSet:Export'),
                         text:"导出",//按钮文字
                         title:"导出",//鼠标停留显示的信息
                         click(){
@@ -47,10 +47,10 @@ export default function ({ crudExpose}: { crudExpose: CrudExpose}): CreateCrudOp
                         }
                     },
                     add: {
-                        show: auth('WaterInfoModelViewSet:Create'),
+                        show: auth('WaterQualityModelViewSet:Create'),
                     },
                     deleteAll: {
-                        show: auth('WaterInfoModelViewSet:DeleteAll'), // 假设这里有对应的权限检查
+                        show: auth('WaterQualityModelViewSet:DeleteAll'), // 假设这里有对应的权限检查
                         text: "一键删除",
                         title: "删除所有涌水量信息数据",
                         click() {
@@ -69,43 +69,26 @@ export default function ({ crudExpose}: { crudExpose: CrudExpose}): CreateCrudOp
                     view: {
                         type: 'text',
                         order: 1,
-                        show: auth('WaterInfoModelViewSet:Retrieve')
+                        show: auth('WaterQualityModelViewSet:Retrieve')
                     },
                     edit: {
                         type: 'text',
                         order: 2,
-                        show: auth('WaterInfoModelViewSet:Update')
+                        show: auth('WaterQualityModelViewSet:Update')
                     },
                     copy: {
                         type: 'text',
                         order: 3,
-                        show: auth('WaterInfoModelViewSet:Copy')
+                        show: auth('WaterQualityModelViewSet:Copy')
                     },
                     remove: {
                         type: 'text',
                         order: 4,
-                        show: auth('WaterInfoModelViewSet:Delete')
+                        show: auth('WaterQualityModelViewSet:Delete')
                     },
                 },
             },
             columns: {
-                date: {
-                    title: '日期',
-                    type: 'date',
-                    search: { show: true},
-                    column: {
-                        minWidth: 120,
-                        sortable: 'custom',
-                    },
-                    form: {
-                        rules: [{ required: true, message: '日期必填' }],
-                        component: {
-                            format: "YYYY-MM-DD",
-                            valueFormat: "YYYY-MM-DD",
-                            placeholder: '请选择日期',
-                        },
-                    },
-                },
                 longitude: {
                     title: '经度',
                     type: 'number',
@@ -156,8 +139,23 @@ export default function ({ crudExpose}: { crudExpose: CrudExpose}): CreateCrudOp
                         },
                     },
                 },
-                rainfall: {
-                    title: '日降雨量',
+                stratigraphic_lithology: {
+                    title: '地层岩性',
+                    type: 'string',
+                    search: { show: false },
+                    column: {
+                        minWidth: 120,
+                        sortable: 'custom',
+                    },
+                    form: {
+                        rules: [{ required: true, message: '地层岩性必填' }],
+                        component: {
+                            placeholder: '请输入地层岩性',
+                        },
+                    },
+                },
+                sulfate_ion_concentration: {
+                    title: '硫酸根离子浓度',
                     type: 'number',
                     search: { show: false },
                     column: {
@@ -165,25 +163,105 @@ export default function ({ crudExpose}: { crudExpose: CrudExpose}): CreateCrudOp
                         sortable: 'custom',
                     },
                     form: {
-                        rules: [{ required: true, message: '日降雨量必填' }],
+                        rules: [{ required: true, message: '硫酸根离子浓度必填' }],
                         component: {
-                            placeholder: '请输入日降雨量',
+                            placeholder: '请输入硫酸根离子浓度',
                             step: 0.001,
                         },
                     },
                 },
-                water_quantity: {
-                    title: '涌水量',
+                carbonate_ion_concentration: {
+                    title: '碳酸根离子浓度',
                     type: 'number',
-                    search: {show: false},
+                    search: { show: false },
                     column: {
                         minWidth: 120,
                         sortable: 'custom',
                     },
                     form: {
-                        rules: [{required: true, message: '涌水量必填'}],
+                        rules: [{ required: true, message: '碳酸根离子浓度必填' }],
                         component: {
-                            placeholder: '请输入涌水量',
+                            placeholder: '请输入碳酸根离子浓度',
+                            step: 0.001,
+                        },
+                    },
+                },
+                total_dissolved_solids: {
+                    title: '溶解性总固体',
+                    type: 'number',
+                    search: { show: false },
+                    column: {
+                        minWidth: 120,
+                        sortable: 'custom',
+                    },
+                    form: {
+                        rules: [{ required: true, message: '溶解性总固体必填' }],
+                        component: {
+                            placeholder: '请输入溶解性总固体',
+                            step: 0.001,
+                        },
+                    },
+                },
+                ph: {
+                    title: 'pH',
+                    type: 'number',
+                    search: { show: false },
+                    column: {
+                        minWidth: 120,
+                        sortable: 'custom',
+                    },
+                    form: {
+                        rules: [{ required: true, message: 'pH必填' }],
+                        component: {
+                            placeholder: '请输入pH',
+                            step: 0.01,
+                        },
+                    },
+                },
+                calcium_magnesium_ratio: {
+                    title: '钙镁比值',
+                    type: 'number',
+                    search: { show: false },
+                    column: {
+                        minWidth: 120,
+                        sortable: 'custom',
+                    },
+                    form: {
+                        rules: [{ required: true, message: '钙镁比值必填' }],
+                        component: {
+                            placeholder: '请输入钙镁比值',
+                            step: 0.001,
+                        },
+                    },
+                },
+                eight_h: {
+                    title: '8-H',
+                    type: 'number',
+                    search: { show: false },
+                    column: {
+                        minWidth: 120,
+                        sortable: 'custom',
+                    },
+                    form: {
+                        rules: [{ required: true, message: '8-H必填' }],
+                        component: {
+                            placeholder: '请输入H同位素',
+                            step: 0.001,
+                        },
+                    },
+                },
+                eight_o: {
+                    title: '8-O',
+                    type: 'number',
+                    search: { show: false },
+                    column: {
+                        minWidth: 120,
+                        sortable: 'custom',
+                    },
+                    form: {
+                        rules: [{ required: true, message: '8-O必填' }],
+                        component: {
+                            placeholder: '请输入氧同位素',
                             step: 0.001,
                         },
                     },

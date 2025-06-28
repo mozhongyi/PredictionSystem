@@ -38,7 +38,7 @@ export default function ({ crudExpose}: { crudExpose: CrudExpose}): CreateCrudOp
                 buttons: {
                     export:{
                         // 注释编号:django-vue3-admin-crud210716:注意这个auth里面的值，最好是使用index.vue文件里面的name值并加上请求动作的单词
-                        show: auth('WaterInfoModelViewSet:Export'),
+                        show: auth('WaterLevelModelViewSet:Export'),
                         text:"导出",//按钮文字
                         title:"导出",//鼠标停留显示的信息
                         click(){
@@ -47,10 +47,10 @@ export default function ({ crudExpose}: { crudExpose: CrudExpose}): CreateCrudOp
                         }
                     },
                     add: {
-                        show: auth('WaterInfoModelViewSet:Create'),
+                        show: auth('WaterLevelModelViewSet:Create'),
                     },
                     deleteAll: {
-                        show: auth('WaterInfoModelViewSet:DeleteAll'), // 假设这里有对应的权限检查
+                        show: auth('WaterLevelModelViewSet:DeleteAll'), // 假设这里有对应的权限检查
                         text: "一键删除",
                         title: "删除所有涌水量信息数据",
                         click() {
@@ -69,22 +69,22 @@ export default function ({ crudExpose}: { crudExpose: CrudExpose}): CreateCrudOp
                     view: {
                         type: 'text',
                         order: 1,
-                        show: auth('WaterInfoModelViewSet:Retrieve')
+                        show: auth('WaterLevelModelViewSet:Retrieve')
                     },
                     edit: {
                         type: 'text',
                         order: 2,
-                        show: auth('WaterInfoModelViewSet:Update')
+                        show: auth('WaterLevelModelViewSet:Update')
                     },
                     copy: {
                         type: 'text',
                         order: 3,
-                        show: auth('WaterInfoModelViewSet:Copy')
+                        show: auth('WaterLevelModelViewSet:Copy')
                     },
                     remove: {
                         type: 'text',
                         order: 4,
-                        show: auth('WaterInfoModelViewSet:Delete')
+                        show: auth('WaterLevelModelViewSet:Delete')
                     },
                 },
             },
@@ -156,8 +156,8 @@ export default function ({ crudExpose}: { crudExpose: CrudExpose}): CreateCrudOp
                         },
                     },
                 },
-                rainfall: {
-                    title: '日降雨量',
+                water_level: {
+                    title: '水位',
                     type: 'number',
                     search: { show: false },
                     column: {
@@ -165,25 +165,9 @@ export default function ({ crudExpose}: { crudExpose: CrudExpose}): CreateCrudOp
                         sortable: 'custom',
                     },
                     form: {
-                        rules: [{ required: true, message: '日降雨量必填' }],
+                        rules: [{ required: true, message: '水位必填' }],
                         component: {
-                            placeholder: '请输入日降雨量',
-                            step: 0.001,
-                        },
-                    },
-                },
-                water_quantity: {
-                    title: '涌水量',
-                    type: 'number',
-                    search: {show: false},
-                    column: {
-                        minWidth: 120,
-                        sortable: 'custom',
-                    },
-                    form: {
-                        rules: [{required: true, message: '涌水量必填'}],
-                        component: {
-                            placeholder: '请输入涌水量',
+                            placeholder: '请输入水位',
                             step: 0.001,
                         },
                     },

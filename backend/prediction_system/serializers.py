@@ -1,4 +1,4 @@
-from prediction_system.models import WaterInfoModel,LstmTrainStatusModel
+from prediction_system.models import WaterInfoModel,LstmTrainStatusModel,WaterLevelModel,WaterQualityModel,BPTrainStatusModel
 from dvadmin.utils.serializers import CustomModelSerializer
 from rest_framework import serializers
 from django.db import transaction
@@ -105,6 +105,7 @@ class ExportWaterInfoModelSerializer(CustomModelSerializer):
         model = WaterInfoModel
         fields = '__all__'
 
+# LSTM训练状态表：lstm_train_status
 class LstmTrainStatusModelSerializer(CustomModelSerializer):
     """
     LSTM训练状态数据的序列化器
@@ -125,3 +126,91 @@ class LstmTrainStatusModelCreateUpdateSerializer(CustomModelSerializer):
         model = LstmTrainStatusModel
         fields = '__all__'
         read_only_fields = ("id",)  # 创建后不可修改ID
+
+
+# 水位表:water_level
+class WaterLevelModelSerializer(CustomModelSerializer):
+    """
+    水位信息序列化器
+    """
+    class Meta:
+        model = WaterLevelModel
+        fields = "__all__"
+
+class WaterLevelModelCreateUpdateSerializer(CustomModelSerializer):
+    """
+    创建/更新水位信息时的序列化器
+    """
+    class Meta:
+        model = WaterLevelModel
+        fields = '__all__'
+
+class WaterLevelModelImportSerializer(CustomModelSerializer):
+    """
+    水位信息导入时的序列化器
+    """
+    class Meta:
+        model = WaterLevelModel
+        fields = '__all__'
+
+class ExportWaterLevelModelSerializer(CustomModelSerializer):
+    """
+    水位信息导出时的序列化器
+    """
+    class Meta:
+        model = WaterLevelModel
+        fields = '__all__'
+
+# 水质信息序列化器
+class WaterQualityModelSerializer(CustomModelSerializer):
+    """
+    水质点信息序列化器
+    """
+    class Meta:
+        model = WaterQualityModel
+        fields = "__all__"
+
+class WaterQualityModelCreateUpdateSerializer(CustomModelSerializer):
+    """
+    创建/更新水质点信息时的序列化器
+    """
+    class Meta:
+        model = WaterQualityModel
+        fields = '__all__'
+
+class WaterQualityModelImportSerializer(CustomModelSerializer):
+    """
+    水质点信息导入时的序列化器
+    """
+    class Meta:
+        model = WaterQualityModel
+        fields = '__all__'
+
+class ExportWaterQualityModelSerializer(CustomModelSerializer):
+    """
+    水质点信息导出时的序列化器
+    """
+    class Meta:
+        model = WaterQualityModel
+        fields = '__all__'
+
+# BP 模型训练状态表：bp_train_status
+class BPTrainStatusModelSerializer(CustomModelSerializer):
+    """
+    BP 模型训练状态数据的序列化器
+    """
+    # get_<field>_display() 方法，自动将 0/1 转换为训练失败/训练成功
+    trainStatus = serializers.CharField(source='get_train_status_display', read_only=True)
+
+    class Meta:
+        model = BPTrainStatusModel
+        fields = "__all__"
+
+class BPTrainStatusModelCreateUpdateSerializer(CustomModelSerializer):
+    """
+    创建/更新 BP 模型训练状态时的序列化器
+    """
+    class Meta:
+        model = BPTrainStatusModel
+        fields = '__all__'
+        read_only_fields = ("id",)  # 创建后不可修改 ID

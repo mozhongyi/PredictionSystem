@@ -92,36 +92,36 @@ export default defineComponent({
 		const state = reactive({
 			homeOne: [
 				{
-					num1: '125,12',
-					num2: '-12.32',
-					num3: '订单统计信息',
+					num1: '322,12',
+					num2: '+12.32',
+					num3: '最高涌水量',
 					num4: 'fa fa-meetup',
 					color1: '#FF6462',
 					color2: '--next-color-primary-lighter',
 					color3: '--el-color-primary',
 				},
 				{
-					num1: '653,33',
-					num2: '+42.32',
-					num3: '月度计划信息',
+					num1: '0',
+					num2: '-42.32',
+					num3: '最低涌水量',
 					num4: 'iconfont icon-ditu',
 					color1: '#6690F9',
 					color2: '--next-color-success-lighter',
 					color3: '--el-color-success',
 				},
 				{
-					num1: '125,65',
+					num1: '25,65',
 					num2: '+17.32',
-					num3: '年度计划信息',
+					num3: '最高降雨量',
 					num4: 'iconfont icon-zaosheng',
 					color1: '#6690F9',
 					color2: '--next-color-warning-lighter',
 					color3: '--el-color-warning',
 				},
 				{
-					num1: '520,43',
+					num1: '3,43',
 					num2: '-10.01',
-					num3: '访问统计信息',
+					num3: '最低降雨量',
 					num4: 'fa fa-github-alt',
 					color1: '#FF6462',
 					color2: '--next-color-danger-lighter',
@@ -198,26 +198,26 @@ export default defineComponent({
 			const option = {
 				backgroundColor: state.charts.bgColor,
 				title: {
-					text: '政策补贴额度',
+					text: '降雨量',
 					x: 'left',
 					textStyle: { fontSize: '15', color: state.charts.color },
 				},
 				grid: { top: 70, right: 20, bottom: 30, left: 30 },
 				tooltip: { trigger: 'axis' },
-				legend: { data: ['预购队列', '最新成交价'], right: 0 },
+				legend: { data: ['2024年降雨量', '2023年降雨量'], right: 0 },
 				xAxis: {
 					data: ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'],
 				},
 				yAxis: [
 					{
 						type: 'value',
-						name: '价格',
+						name: '值',
 						splitLine: { show: true, lineStyle: { type: 'dashed', color: '#f5f5f5' } },
 					},
 				],
 				series: [
 					{
-						name: '预购队列',
+						name: '2023年降雨量',
 						type: 'line',
 						symbolSize: 6,
 						symbol: 'circle',
@@ -233,7 +233,7 @@ export default defineComponent({
 						},
 					},
 					{
-						name: '最新成交价',
+						name: '2024年降雨量',
 						type: 'line',
 						symbolSize: 6,
 						symbol: 'circle',
@@ -277,7 +277,7 @@ export default defineComponent({
 		const initPieChart = () => {
 			if (!global.dispose.some((b: any) => b === global.homeChartTwo)) global.homeChartTwo.dispose();
 			global.homeChartTwo = <any>echarts.init(homePieRef.value, state.charts.theme);
-			var getname = ['房屋及结构物', '专用设备', '通用设备', '文物和陈列品', '图书、档案'];
+			var getname = ['一级预警', '二级预警', '三级预警', '四级预警', '五级预警'];
 			var getvalue = [34.2, 38.87, 17.88, 9.05, 2.05];
 			var data = [];
 			for (var i = 0; i < getname.length; i++) {
@@ -287,7 +287,7 @@ export default defineComponent({
 			const option = {
 				backgroundColor: state.charts.bgColor,
 				title: {
-					text: '房屋建筑工程',
+					text: '涌水量预警等级分布',
 					x: 'left',
 					textStyle: { fontSize: '15', color: state.charts.color },
 				},
@@ -365,17 +365,17 @@ export default defineComponent({
 			const option = {
 				backgroundColor: state.charts.bgColor,
 				title: {
-					text: '地热开发利用',
+					text: '2024年某点水质与水位',
 					x: 'left',
 					textStyle: { fontSize: '15', color: state.charts.color },
 				},
 				tooltip: { trigger: 'axis' },
-				legend: { data: ['供温', '回温', '压力值(Mpa)'], right: 0 },
+				legend: { data: ['水质', '水位', '压力值(Mpa)'], right: 0 },
 				grid: { top: 70, right: 80, bottom: 30, left: 80 },
 				xAxis: [
 					{
 						type: 'category',
-						data: ['1km', '2km', '3km', '4km', '5km', '6km'],
+						data: ['1月', '2月', '3月', '4月', '5月', '6月'],
 						boundaryGap: true,
 						axisTick: { show: false },
 					},
@@ -402,7 +402,7 @@ export default defineComponent({
 				],
 				series: [
 					{
-						name: '供温',
+						name: '水质',
 						type: 'line',
 						smooth: true,
 						showSymbol: true,
@@ -430,7 +430,7 @@ export default defineComponent({
 						],
 					},
 					{
-						name: '回温',
+						name: '水位',
 						type: 'line',
 						smooth: true,
 						showSymbol: true,
