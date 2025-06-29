@@ -57,3 +57,22 @@ export function deleteAllWaterInfo() {
         method: 'delete',
     });
 }
+
+// 获取日志的接口调用函数
+export function getLog(modelName:string) {
+    return request({
+        url: apiPrefix + 'get-log/',
+        method: 'get',
+        params: { modelName }
+    });
+}
+
+// 获取Bp可视化图片的接口调用函数
+export function get_bp_image(modelName:string ) {
+    return request({
+        url: apiPrefix + 'get_bp_image/',
+        method: 'get',
+        params: modelName,
+        responseType: 'blob' // 因为返回的是图片二进制数据，所以设置响应类型为 blob
+    });
+}

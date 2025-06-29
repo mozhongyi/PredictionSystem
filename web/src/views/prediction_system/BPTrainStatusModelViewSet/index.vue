@@ -7,9 +7,6 @@
       <!-- 注释编号: django-vue3-admin-index442216: -->
       <!-- 注释编号:django-vue3-admin-index39263917:代码开始行-->
       <!--  功能说明:使用导入组件，并且修改api地址为当前对应的api，当前是demo的api="api/CrudDemoModelViewSet/"-->
-      <template #actionbar-right>
-        <importExcel api="api/BPTrainStatusModelViewSet/" v-auth="'user:Import'">导入</importExcel>
-      </template>
       <!--  注释编号:django-vue3-admin-index263917:代码结束行-->
 
     </fs-crud>

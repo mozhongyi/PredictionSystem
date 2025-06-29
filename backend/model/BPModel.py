@@ -6,6 +6,7 @@ import torch.optim as optim
 from sklearn.datasets import fetch_openml
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import MinMaxScaler
 from sklearn.metrics import mean_squared_error
 import seaborn as sns
 import plotly.express as px
@@ -20,6 +21,7 @@ import os
 import time,math
 import joblib
 from datetime import datetime
+from sklearn.metrics.pairwise import euclidean_distances
 
 # 简单的日志记录器，支持日志恢复功能
 class Logger:
@@ -221,12 +223,12 @@ def BPTrain(modelName,waterInfo,waterLevel):
     # 使用pd.concat将列表中的所有DataFrame合并成一个单一的DataFrame
     df_fill = pd.concat(df_list, ignore_index=True)
     df_fill = df_fill.round(3)
+    df_fill.to_excel('bp_models/text0.xlsx')
 
     # 模型输出实际值
     target = df_fill['water_quantity']
     # 模型输入值
     data = df_fill.drop(['water_quantity'], axis=1)
-    pprint.pprint(data)
 
     X = data.astype(np.float32)  # 特征
     y = target.astype(np.float32).values.reshape(-1, 1)  # 目标值，转换为 NumPy 数组并重塑
@@ -257,6 +259,8 @@ def BPTrain(modelName,waterInfo,waterLevel):
     X_val_scaled = scaler.transform(X_val)
     X_test_scaled = scaler.transform(X_test)
 
+
+
     X_train_tensor = torch.tensor(X_train_scaled, dtype=torch.float32)
     y_train_tensor = torch.tensor(y_train, dtype=torch.float32)
     X_val_tensor = torch.tensor(X_val_scaled, dtype=torch.float32)
@@ -272,7 +276,7 @@ def BPTrain(modelName,waterInfo,waterLevel):
     optimizer = optim.Adam(model.parameters(), lr=0.001)  # Adam 优化器
 
     # 训练模型
-    num_epochs = 100
+    num_epochs = 2000
     hist = np.zeros(num_epochs)
     best_val_loss = float('inf')  # 用于保存验证集上的最佳损失
     best_train_loss = float('inf')  # 保存训练集上得最佳损失
@@ -437,3 +441,100 @@ def BPTrain(modelName,waterInfo,waterLevel):
 
     # 返回训练完毕的时间、训练集RMSE、测试集RMSE、训练完成标志
     return current_time,trainScore,testScore,train_status
+
+# 参数:
+# user_lon: 用户输入的经度
+# user_lat: 用户输入的纬度
+# user_elev: 用户输入的高程
+# water_inflow_df: 涌水量表DataFrame
+# water_level_df: 水位信息表DataFrame
+# 返回:
+# 整合后的单行DataFrame，包含所有水位组的信息
+# 用将用户的输入处理成BP模型需要的格式
+def process_geospatial_data_multiple_groups(user_lon, user_lat, user_elev, water_inflow_df, water_level_df):
+
+    # 创建用户输入数据的DataFrame
+    user_data = pd.DataFrame({
+        '用户经度': [user_lon],
+        '用户纬度': [user_lat],
+        '用户高程': [user_elev]
+    })
+
+    # 步骤1: 在涌水量表中找到与用户输入点最近的点
+    # 计算每个点到用户输入点的欧氏距离
+    user_point = np.array([[user_lon, user_lat, user_elev]])
+    water_inflow_points = water_inflow_df[['longitude', 'latitude', 'altitude']].values
+
+    # 正确计算每个点到用户输入点的距离
+    water_inflow_df['距离'] = euclidean_distances(water_inflow_points, user_point).flatten()
+
+    # 按距离和日期排序，找到最近的点
+    nearest_inflow = water_inflow_df.sort_values(by=['距离', 'date'], ascending=[True, False]).iloc[0]
+
+    # 提取最近点的日降雨量和涌水量
+    user_data['rainfall'] = nearest_inflow['rainfall']
+    user_data['water_quantity'] = nearest_inflow['water_quantity']
+
+    # 步骤2: 按经纬度高程分组处理水位信息表
+    water_level_groups = water_level_df.groupby(['longitude', 'latitude', 'altitude'])
+
+    # 遍历每个组并添加到结果中
+    for i, (group_key, group_data) in enumerate(water_level_groups):
+        group_lon, group_lat, group_elev = group_key
+
+        # 计算用户输入点与当前组的欧氏距离
+        group_point = np.array([[group_lon, group_lat, group_elev]])
+        distance = euclidean_distances(user_point, group_point)[0, 0]
+
+        # 获取当前组的最新水位
+        latest_water_level = group_data.sort_values('date', ascending=False).iloc[0]['water_level']
+
+        # 添加当前组的信息到结果
+        user_data[f'水位组{i + 1}_经度'] = group_lon
+        user_data[f'水位组{i + 1}_纬度'] = group_lat
+        user_data[f'水位组{i + 1}_高程'] = group_elev
+        user_data[f'水位组{i + 1}_距离'] = distance
+        user_data[f'水位组{i + 1}_水位'] = latest_water_level
+
+    return user_data
+
+# 通过用户传入的经度、纬度、高程，预测最终结果
+def PredictWaterQuality(user_lon, user_lat, user_elev, water_inflow_df, water_level_df, model_name):
+    # 处理成模型输入的格式
+    input_df = process_geospatial_data_multiple_groups(user_lon, user_lat, user_elev, water_inflow_df, water_level_df)
+    input_df.to_excel('bp_models/text.xlsx')
+    pprint.pprint(input_df)
+    input_df = input_df.drop(['water_quantity'],axis=1)
+
+    # 加载最佳模型
+    model = RegressionModel(input_df.shape[1])
+    best_model_path = f'bp_models/{model_name}best_model.pth'
+    model.load_state_dict(torch.load(best_model_path, weights_only=True))
+    model.eval()  # 将模型设置为评估模式
+
+    # 加载标准化格式scaler
+    best_scaler_path = f'bp_scalers/{model_name}best_scaler.pkl'
+    scaler = joblib.load(best_scaler_path)
+
+    # 用scaler数据标准化
+    origin_columns = scaler.get_feature_names_out()
+    input_df.columns = origin_columns
+    # 确保输入是二维数组（即使只有一行数据）
+    if len(input_df.shape) == 1:
+        input_df = input_df.reshape(1, -1)
+
+    X_user_scaled = scaler.transform(input_df)
+    # 转换成张量
+    X_user_tensor = torch.tensor(X_user_scaled, dtype=torch.float32)
+
+    # 预测
+    with torch.no_grad():
+        y_user_pred_tensor = model(X_user_tensor)
+
+    # 得到正确预测结果
+    y_user_pred = y_user_pred_tensor.numpy()
+    # 保留三位小数
+    y_user_pred = np.round(y_user_pred, 3)
+    y_user_pred = y_user_pred[0][0]
+
+    return y_user_pred

@@ -9,7 +9,7 @@ from prediction_system.serializers import WaterQualityModelSerializer,WaterQuali
 from prediction_system.serializers import BPTrainStatusModelSerializer,BPTrainStatusModelCreateUpdateSerializer
 from dvadmin.utils.viewset import CustomModelViewSet
 from model.LstmModel import LstmModelTrainSingle
-from model.BPModel import BPTrain
+from model.BPModel import BPTrain,PredictWaterQuality
 
 from django.db import transaction
 from rest_framework.decorators import action
@@ -474,3 +474,131 @@ class BPTrainStatusModelViewSet(CustomModelViewSet):
         serializer.save()
 
         return Response({'message': '训练成功'}, status=HTTP_201_CREATED)
+
+    # 获取日志的接口（改进版）
+    @action(detail=False, methods=['get'], url_path='get-log')
+    def get_log(self, request):
+        # 获取前端传入的经纬度和高程信息
+        modelName = request.query_params.get('modelName')
+
+
+        # 验证必要参数
+        if not all([modelName]):
+            return Response({
+                'detail': '缺少必要参数：模型名称',
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        # 组装目标日志路径（使用更规范的文件名格式）
+        log_path = f'bp_logs/{modelName}training.log'
+
+        # 检查日志文件是否存在
+        if os.path.exists(log_path):
+            try:
+                # 方案1：自动检测文件编码（推荐）
+                with open(log_path, 'rb') as f:
+                    raw_data = f.read(2048)  # 读取前2KB用于检测编码
+                    encoding = chardet.detect(raw_data)['encoding'] or 'utf-8'
+
+                # 使用检测到的编码读取文件
+                with open(log_path, 'r', encoding=encoding) as file:
+                    log_content = file.read()
+
+                return Response({
+                    'status': '200',
+                    'data': log_content
+                }, status=status.HTTP_200_OK)
+
+            except Exception as e:
+                return Response({
+                    'status': '500'
+                }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        else:
+            return Response({
+                'status': '404'
+            }, status=status.HTTP_404_NOT_FOUND)
+
+    # 获取模型可视化图片的接口
+    @action(detail=False, methods=['get'], url_path='get_bp_image')
+    def get_visualization_image(self, request):
+        # 获取前端传入的经纬度和高程信息
+        modelName = request.query_params.get('model_name')
+
+        # 验证必要参数
+        if not all([modelName]):
+            return Response({
+                'detail': '缺少必要参数：模型名称',
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        # 组装目标图片路径（使用更规范的文件名格式）
+        image_path = f'bp_images/{modelName}真实值vs预测值.png'
+
+        # 检查图片文件是否存在
+        if os.path.exists(image_path):
+            try:
+                # 读取图片文件
+                with open(image_path, 'rb') as file:
+                    image_data = file.read()
+
+                # 响应图片数据给前端
+                return HttpResponse(image_data, content_type='image/jpg')
+                # return Response(image_data, status=status.HTTP_200_OK, content_type='image/png')
+
+            except Exception as e:
+                return Response({
+                    'detail': f'读取图片失败: {str(e)}',
+                }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        else:
+            return Response({
+                'detail': '未找到对应的可视化图片',
+            }, status=status.HTTP_404_NOT_FOUND)
+
+    # 用户预测接口
+    @action(detail=False, methods=['post'], url_path='predict-water-quality')
+    def predict_water_quality(self, request):
+        # 获取前端传入的经度、纬度、高程和模型名称
+        user_lon = request.data.get('longitude')
+        user_lat = request.data.get('latitude')
+        user_elev = request.data.get('altitude')
+        model_name = request.data.get('model_name')
+
+        # 验证必要参数
+        if not all([user_lon, user_lat, user_elev, model_name]):
+            return Response({
+                'detail': '缺少必要参数：经度、纬度、高程和模型名称',
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            # 获取 waterInfo 和 waterLevel 的数据
+            water_info_data = WaterInfoModel.objects.all()
+            water_info_df = pd.DataFrame(list(water_info_data.values()))
+            # 转换需要的列
+            water_info_df['longitude'] = water_info_df['longitude'].astype(float)
+            water_info_df['latitude'] = water_info_df['latitude'].astype(float)
+            water_info_df['altitude'] = water_info_df['altitude'].astype(float)
+            water_info_df['rainfall'] = water_info_df['rainfall'].astype(float)
+            water_info_df['water_quantity'] = water_info_df['water_quantity'].astype(float)
+
+            water_level_data = WaterLevelModel.objects.all()
+            water_level_df = pd.DataFrame(list(water_level_data.values()))
+            # 转换需要的列
+            water_level_df['longitude'] = water_level_df['longitude'].astype(float)
+            water_level_df['latitude'] = water_level_df['latitude'].astype(float)
+            water_level_df['altitude'] = water_level_df['altitude'].astype(float)
+            water_level_df['water_level'] = water_level_df['water_level'].astype(float)
+
+            # 调用预测函数
+            prediction = PredictWaterQuality(user_lon, user_lat, user_elev, water_info_df, water_level_df, model_name)
+
+            prediction = round(prediction,3)
+            prediction = prediction / 2.5
+
+            return Response({
+                'prediction': prediction
+            }, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response({
+                'detail': f'预测失败: {str(e)}'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

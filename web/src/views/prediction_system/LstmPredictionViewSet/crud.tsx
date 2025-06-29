@@ -82,11 +82,7 @@ export default function ({ crudExpose}: { crudExpose: CrudExpose}): CreateCrudOp
                     },
                     // 添加“训练”按钮
                     train: {
-                        type: 'text',
-                        order: 5,
-                        show: auth('LtsmModelViewSet:Train'),
-                        text: '训练',
-                        click: async ({ row }) => {
+                        click: async ({row}) => {
                             let pollInterval: any = null; // 轮询定时器
                             let logTextarea: HTMLTextAreaElement | null = null; // 日志文本框引用
                             let closeButton: HTMLButtonElement | null = null; // 关闭按钮引用
@@ -94,7 +90,7 @@ export default function ({ crudExpose}: { crudExpose: CrudExpose}): CreateCrudOp
                             try {
                                 // 显示加载状态
                                 row.loading = true;
-                                const { longitude, latitude, altitude } = row;
+                                const {longitude, latitude, altitude} = row;
 
                                 // 1. 训练开始即创建日志显示框
                                 logTextarea = document.createElement('textarea');
@@ -158,21 +154,21 @@ export default function ({ crudExpose}: { crudExpose: CrudExpose}): CreateCrudOp
                                         if (!logTextarea || isTrainingCompleted) return;
                                         try {
                                             const logResponse = await getLog(longitude, latitude, altitude);
-                                            console.log('logResponse : ',logResponse);
+                                            console.log('logResponse : ', logResponse);
                                             if (logResponse.status === '200') {
                                                 logTextarea.value = logResponse.data;
                                                 // 滚动到日志底部
                                                 logTextarea.scrollTop = logTextarea.scrollHeight;
                                             }
-                                        } catch (logError) {
-                                            logTextarea.value += `\n获取日志失败: ${logError.message}`;
+                                        } catch (error) {
+                                            logTextarea.value += `\n获取日志失败: ${error.message}`;
                                         }
                                     }, 1000); // 1秒轮询一次
                                 }
 
                                 startPolling(); // 立即开始轮询
 
-                                const response = await trainSinglePoint({ longitude, latitude, altitude });
+                                const response = await trainSinglePoint({longitude, latitude, altitude});
                                 if (response.data.message === '模型训练成功') {
                                     // 更新训练状态为成功
                                     row.trainStatus = "已训练";
@@ -184,7 +180,7 @@ export default function ({ crudExpose}: { crudExpose: CrudExpose}): CreateCrudOp
                                 crudExpose.doRefresh();
                                 // 处理训练失败的情况
                                 console.error('训练失败:', error);
-                            } finally{
+                            } finally {
                                 // 确保清理资源
                                 function stopPolling() {
                                     if (pollInterval) {
@@ -206,7 +202,11 @@ export default function ({ crudExpose}: { crudExpose: CrudExpose}): CreateCrudOp
                                 crudExpose.doRefresh();
                             }
 
-                        }
+                        },
+                        order: 5,
+                        show: auth('LtsmModelViewSet:Train'),
+                        text: '训练',
+                        type: 'text'
                     },
                     trainLog:{
                         type: 'text',
